@@ -10,7 +10,7 @@ public class Lemma {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "site_id", columnDefinition = "INT NOT NULL")
     private SiteEntity site;
     @Column(columnDefinition = "VARCHAR(255) NOT NULL")

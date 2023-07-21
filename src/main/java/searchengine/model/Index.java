@@ -10,7 +10,7 @@ public class Index {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "page_id", columnDefinition = "INT NOT NULL")
     private Page page;
     @ManyToOne
