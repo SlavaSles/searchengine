@@ -35,6 +35,7 @@ public class SiteEntity {
 //    @Transient
 //    @OneToMany (mappedBy = site_id)
 //    private Page page;
+//    CascadeType.REMOVE по пробовать
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "site")
     private Set<Page> pages;
 

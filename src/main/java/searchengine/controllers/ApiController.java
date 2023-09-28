@@ -32,18 +32,20 @@ public class ApiController {
     }
 
     @GetMapping("/startIndexing")
-    public ResponseEntity startIndexing() {
+    public ResponseEntity<?> startIndexing() {
         //TODO: добавить сервис с проверкой запуска индексации
+//        boolean result = false;
 //        if (true) {
 //
 //            return ResponseEntity.ok(new StartIndexingResponse());
 //        }
 //        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorStartIndexingResponse());
-        return ResponseEntity.ok(indexingService.indexing());
+//        result = indexingService.indexing().isResult();
+        return ResponseEntity.ok( indexingService.indexing());
     }
 
     @GetMapping("/stopIndexing")
-    public ResponseEntity stopIndexing() {
+    public ResponseEntity<?> stopIndexing() {
         //TODO: добавить сервис с проверкой запуска индексации
         if (false) {
             return ResponseEntity.ok(new StopIndexingResponse());
