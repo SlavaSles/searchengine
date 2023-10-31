@@ -1,10 +1,7 @@
 package searchengine.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Builder
 @Data
@@ -12,19 +9,20 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Entity
 @Table(name = "page")
-//, indexes = @Index(name = "path_index", columnList = "path"))
+//, indexes = @Index(name = "path_index", columnList = "path, site_id", unique = true)
 public class Page {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     //(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "site_id", columnDefinition = "INT NOT NULL")//, nullable = false)
-    private SiteEntity site;
-    @Column(columnDefinition = "TEXT NOT NULL, Index (path(255))")//, nullable = false)
+    @JoinColumn(name = "site_id", columnDefinition = "INT NOT NULL")
+    @ToString.Exclude
+    private Site site;
+    @Column(columnDefinition = "TEXT NOT NULL, INDEX (PATH(255))")
     private String path;
-    @Column(columnDefinition = "INT NOT NULL")//nullable = false)
+    @Column(columnDefinition = "INT NOT NULL")
     private Integer code;
-    @Column(columnDefinition = "MEDIUMTEXT NOT NULL")//, nullable = false)
+    @Column(columnDefinition = "MEDIUMTEXT NOT NULL")
     private String content;
 }

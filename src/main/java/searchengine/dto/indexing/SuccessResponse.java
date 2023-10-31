@@ -5,6 +5,6 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 @Getter
-public class StopIndexingResponse {
+public class SuccessResponse extends Response{
     private final boolean result = true;
 }

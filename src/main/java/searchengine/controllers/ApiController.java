@@ -1,14 +1,15 @@
 package searchengine.controllers;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import searchengine.dto.indexing.ErrorStartIndexingResponse;
-import searchengine.dto.indexing.ErrorStopIndexingResponse;
-import searchengine.dto.indexing.StartIndexingResponse;
-import searchengine.dto.indexing.StopIndexingResponse;
+import searchengine.dto.indexing.ErrorMessage;
+import searchengine.dto.indexing.ErrorResponse;
+import searchengine.dto.indexing.SuccessResponse;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.services.IndexingService;
 import searchengine.services.StatisticsService;
@@ -20,11 +21,11 @@ public class ApiController {
     private final StatisticsService statisticsService;
     private final IndexingService indexingService;
 
+    @Autowired
     public ApiController(StatisticsService statisticsService, IndexingService indexingService) {
         this.statisticsService = statisticsService;
         this.indexingService = indexingService;
     }
-
 
     @GetMapping("/statistics")
     public ResponseEntity<StatisticsResponse> statistics() {
@@ -33,23 +34,25 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity<?> startIndexing() {
-        //TODO: добавить сервис с проверкой запуска индексации
-//        boolean result = false;
-//        if (true) {
-//
-//            return ResponseEntity.ok(new StartIndexingResponse());
-//        }
-//        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorStartIndexingResponse());
-//        result = indexingService.indexing().isResult();
-        return ResponseEntity.ok( indexingService.indexing());
+        if (indexingService.indexing()) {
+            return ResponseEntity.ok( new SuccessResponse());
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ErrorMessage.START_INDEXING_ERROR));
     }
 
     @GetMapping("/stopIndexing")
     public ResponseEntity<?> stopIndexing() {
-        //TODO: добавить сервис с проверкой запуска индексации
-        if (false) {
-            return ResponseEntity.ok(new StopIndexingResponse());
+        if (indexingService.stopIndexing()) {
+            return ResponseEntity.ok(new SuccessResponse());
         }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorStopIndexingResponse());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ErrorMessage.STOP_INDEXING_ERROR));
+    }
+
+    @PostMapping("/indexPage")
+    public ResponseEntity<?> indexPage(String url) {
+        if (indexingService.indexPage(url)) {
+            return ResponseEntity.ok(new SuccessResponse());
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ErrorMessage.PAGE_INDEXING_ERROR));
     }
 }
