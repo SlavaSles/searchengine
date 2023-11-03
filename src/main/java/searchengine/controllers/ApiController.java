@@ -1,5 +1,6 @@
 package searchengine.controllers;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,16 +17,12 @@ import searchengine.services.StatisticsService;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class ApiController {
-
-    private final StatisticsService statisticsService;
-    private final IndexingService indexingService;
-
     @Autowired
-    public ApiController(StatisticsService statisticsService, IndexingService indexingService) {
-        this.statisticsService = statisticsService;
-        this.indexingService = indexingService;
-    }
+    private final StatisticsService statisticsService;
+    @Autowired
+    private final IndexingService indexingService;
 
     @GetMapping("/statistics")
     public ResponseEntity<StatisticsResponse> statistics() {

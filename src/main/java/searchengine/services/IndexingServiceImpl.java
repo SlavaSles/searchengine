@@ -25,7 +25,7 @@ public class IndexingServiceImpl implements IndexingService {
 
     public boolean indexing() {
         fjp = new ForkJoinPool();
-        if (currentTasks.size() == 0) {
+        if (currentTasks.isEmpty()) {
             SiteMapper.setIsInterrupted(false);
             for(SiteCfg siteCfg : sites.getSites()) {
                 IndexingThread indexingThread = context.getBean(IndexingThread.class);
@@ -41,7 +41,7 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     public boolean stopIndexing() {
-        if (currentTasks.size() != 0) {
+        if (!currentTasks.isEmpty()) {
             SiteMapper.setIsInterrupted(true);
             for (IndexingThread task : currentTasks) {
                 task.interrupt();

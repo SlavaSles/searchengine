@@ -9,12 +9,10 @@ import lombok.*;
 @AllArgsConstructor
 @Entity
 @Table(name = "page")
-//, indexes = @Index(name = "path_index", columnList = "path, site_id", unique = true)
 public class Page {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    //(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id", columnDefinition = "INT NOT NULL")
     @ToString.Exclude

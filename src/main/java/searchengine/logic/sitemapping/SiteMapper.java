@@ -14,6 +14,7 @@ import searchengine.model.Site;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.RecursiveAction;
@@ -65,7 +66,8 @@ public class SiteMapper extends RecursiveAction {
         if (isInterrupted) {
             return;
         }
-        ConcurrentSkipListSet<Page> newPages = new ConcurrentSkipListSet<>(new PageComparator());
+        ConcurrentSkipListSet<Page> newPages = new ConcurrentSkipListSet<>(
+                Comparator.comparing(Page::getPath));
         findUrls(doc, newPages);
         List<SiteMapper> taskList = new ArrayList<>();
         for (Page newPage : newPages) {

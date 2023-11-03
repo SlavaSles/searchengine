@@ -17,6 +17,7 @@ import searchengine.repository.SiteRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ForkJoinPool;
@@ -39,7 +40,8 @@ public class IndexingThread extends Thread {
     private ForkJoinPool fjp;
     @Setter
     private String addedUrl;
-    private final ConcurrentSkipListSet<Page> allPages = new ConcurrentSkipListSet<>(new PageComparator());
+    private final ConcurrentSkipListSet<Page> allPages = new ConcurrentSkipListSet<>(
+            (Comparator.comparing(Page::getPath)));
     private SiteMapper siteMapper;
 
     @Override
