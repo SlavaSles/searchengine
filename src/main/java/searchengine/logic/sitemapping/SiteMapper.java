@@ -8,18 +8,21 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import searchengine.config.Connection;
+import searchengine.config.auxclass.Connection;
 import searchengine.model.Page;
 import searchengine.model.Site;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.RecursiveAction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static java.lang.Thread.sleep;
 
 public class SiteMapper extends RecursiveAction {
     private final String REGEX_SUBDOMAIN_URL_SEARCH;
@@ -39,13 +42,13 @@ public class SiteMapper extends RecursiveAction {
         this.site = site;
         this.page = page;
         this.pages = pages;
-        this.REGEX_SUBDOMAIN_URL_SEARCH = "(" + site.getSubDomain() +
+        this.REGEX_SUBDOMAIN_URL_SEARCH = "^(" + site.getSubDomain() +
                 Regexes.SLASH_TEXT_SLASH + Regexes.SEARCH_PARAMS + ")$";
-        this.REGEX_SUBDOMAIN_URL_RU_SEARCH = "(" + site.getSubDomain() +
+        this.REGEX_SUBDOMAIN_URL_RU_SEARCH = "^(" + site.getSubDomain() +
                 Regexes.SLASH_TEXT_SLASH_RU + Regexes.SEARCH_PARAMS_RU + ")$";
-        this.REGEX_SUBDOMAIN_URL_HTML_SEARCH = "(" + site.getSubDomain() +
+        this.REGEX_SUBDOMAIN_URL_HTML_SEARCH = "^(" + site.getSubDomain() +
                 Regexes.SLASH_TEXT_SLASH + Regexes.HTML_URL + Regexes.SEARCH_PARAMS + ")$";
-        this.REGEX_SUBDOMAIN_URL_PHP_SEARCH = "(" + site.getSubDomain() +
+        this.REGEX_SUBDOMAIN_URL_PHP_SEARCH = "^(" + site.getSubDomain() +
                 Regexes.SLASH_TEXT_SLASH + Regexes.PHP_URL + Regexes.SEARCH_PARAMS + ")$";
     }
 
@@ -87,12 +90,10 @@ public class SiteMapper extends RecursiveAction {
         int statusCode = 0;
         String content = "";
         try {
-            Thread.currentThread().sleep(300);
+            sleep(300);
             LOGGER.info("Обращение по адресу: " + site.getDomain().concat(page.getPath()));
-            String threadName = Thread.currentThread().getName();
-            int threadNumber = Integer.parseInt((threadName).substring(threadName.length() - 1));
             doc = Jsoup.connect(site.getDomain().concat(page.getPath()))
-                    .userAgent(connection.getUserAgents().get(threadNumber % 2).getAgent())
+                    .userAgent(connection.getUserAgents().get(selectAgent()).getAgent())
                     .referrer(connection.getReferrer())
                     .timeout(10000)
                     .followRedirects(false)
@@ -100,10 +101,8 @@ public class SiteMapper extends RecursiveAction {
             content = doc.outerHtml();
             statusCode = doc.connection().response().statusCode();
         } catch (HttpStatusException e) {
-            e.getMessage();
             statusCode = getStatus(e.getMessage());
         } catch (IOException e) {
-            e.getMessage();
             statusCode = getStatus(e.getMessage());
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -111,6 +110,12 @@ public class SiteMapper extends RecursiveAction {
         page.setCode(statusCode);
         page.setContent(content);
         return doc;
+    }
+
+    private int selectAgent() {
+        String threadName = Thread.currentThread().getName();
+        int threadNumber = Integer.parseInt(threadName.substring(threadName.length() - 1));
+        return threadNumber % 2;
     }
 
     private int getStatus(String message) {
@@ -122,14 +127,14 @@ public class SiteMapper extends RecursiveAction {
         }
     }
 
-    private ConcurrentSkipListSet<Page> findUrls(Document doc, ConcurrentSkipListSet<Page> newPages) {
-        int subUrlLevel = page.getPath().length() - page.getPath().replaceAll("/","").length();
+    private void findUrls(Document doc, ConcurrentSkipListSet<Page> newPages) {
+        int subUrlLevel = calculateUrlLevel(page.getPath());
         Elements links = doc.select("a");
         links.forEach(link -> {
                     if (!isInterrupted) {
                         String urlLink = urlMatching(link);
-                        int urlLevel = urlLink.length() - urlLink.replaceAll("/","").length();
-                        if (!page.getPath().equals(urlLink) && (urlLevel - subUrlLevel) >= 0) {
+                        int urlLevel = calculateUrlLevel(urlLink);
+                        if (!page.getPath().equals(urlLink) && ((urlLevel - subUrlLevel) >= 0)) {
                             Page findPage = Page.builder()
                                     .site(site)
                                     .path(urlLink)
@@ -144,43 +149,31 @@ public class SiteMapper extends RecursiveAction {
                     }
                 }
         );
-        return newPages;
+    }
+
+    private int calculateUrlLevel(String url) {
+        return url.length() - url.replaceAll("/","").length();
     }
 
     private String urlMatching(Element link) {
         String textLink = link.attr("href");
-        String regex1, regex2, regex3, regex4;
-        if (textLink.startsWith("http")) {
-            regex1 = site.getDomain().concat(REGEX_SUBDOMAIN_URL_SEARCH);
-            regex2 = site.getDomain().concat(REGEX_SUBDOMAIN_URL_HTML_SEARCH);
-            regex3 = site.getDomain().concat(REGEX_SUBDOMAIN_URL_PHP_SEARCH);
-            regex4 = site.getDomain().concat(REGEX_SUBDOMAIN_URL_RU_SEARCH);
-        } else {
-            regex1 = "^".concat(REGEX_SUBDOMAIN_URL_SEARCH);
-            regex2 = "^".concat(REGEX_SUBDOMAIN_URL_HTML_SEARCH);
-            regex3 = "^".concat(REGEX_SUBDOMAIN_URL_PHP_SEARCH);
-            regex4 = "^".concat(REGEX_SUBDOMAIN_URL_RU_SEARCH);
-        }
-        Pattern pattern1 = Pattern.compile(regex1);
-        Matcher matcher1 = pattern1.matcher(textLink);
-        Pattern pattern2 = Pattern.compile(regex2);
-        Matcher matcher2 = pattern2.matcher(textLink);
-        Pattern pattern3 = Pattern.compile(regex3);
-        Matcher matcher3 = pattern3.matcher(textLink);
-        Pattern pattern4 = Pattern.compile(regex4);
-        Matcher matcher4 = pattern4.matcher(textLink);
         String urlLink = "";
-        if (matcher1.find()) {
-            urlLink = matcher1.group(1).trim();
+        List<String> regexes = Arrays.asList(REGEX_SUBDOMAIN_URL_SEARCH, REGEX_SUBDOMAIN_URL_HTML_SEARCH,
+                REGEX_SUBDOMAIN_URL_PHP_SEARCH, REGEX_SUBDOMAIN_URL_RU_SEARCH);
+        if (textLink.startsWith("http")) {
+            List<String> httpRegexes = new ArrayList<>();
+            for (String regex : regexes) {
+                httpRegexes.add(site.getDomain().concat(regex.substring(1)));
+            }
+            regexes = httpRegexes;
         }
-        else if (matcher2.find()) {
-            urlLink = matcher2.group(1).trim();
-        }
-        else if (matcher3.find()) {
-            urlLink = matcher3.group(1).trim();
-        }
-        else if (matcher4.find()) {
-            urlLink = matcher4.group(1).trim();
+        for (String regex : regexes) {
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(textLink);
+            if (matcher.find()) {
+                urlLink = matcher.group(1).trim();
+                break;
+            }
         }
         return urlLink;
     }

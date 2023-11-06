@@ -2,12 +2,11 @@ package searchengine.logic.sitemapping;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import searchengine.config.Connection;
+import searchengine.config.auxclass.Connection;
 import searchengine.config.SiteCfg;
 import searchengine.model.Page;
 import searchengine.model.Site;
@@ -17,8 +16,9 @@ import searchengine.repository.SiteRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Matcher;
@@ -28,11 +28,8 @@ import java.util.regex.Pattern;
 @Scope(BeanDefinition.SCOPE_PROTOTYPE)
 @RequiredArgsConstructor
 public class IndexingThread extends Thread {
-    @Autowired
     private final SiteRepository siteRepository;
-    @Autowired
     private final PageRepository pageRepository;
-    @Autowired
     private final Connection connection;
     @Setter
     private SiteCfg siteCfg;
@@ -40,9 +37,9 @@ public class IndexingThread extends Thread {
     private ForkJoinPool fjp;
     @Setter
     private String addedUrl;
+    private SiteMapper siteMapper;
     private final ConcurrentSkipListSet<Page> allPages = new ConcurrentSkipListSet<>(
             (Comparator.comparing(Page::getPath)));
-    private SiteMapper siteMapper;
 
     @Override
     public void run() {
@@ -58,38 +55,40 @@ public class IndexingThread extends Thread {
                 .name(siteCfg.getName())
                 .build();
         if (!Thread.currentThread().isInterrupted()) {
-            deleteExistSiteAndPagesFromDB(site);
-            site.setDomain(findDomain(site));
-            site.setSubDomain(findSubDomainUrl(site));
-            saveSite(site);
-            Page firstPage = Page.builder()
-                    .site(site)
-                    .path(site.getSubDomain().concat("/"))
-                    .code(0)
-                    .content("")
-                    .build();
-            allPages.add(firstPage);
-            siteMapper = new SiteMapper(connection, site, firstPage, allPages);
-            fjp.invoke(siteMapper);
+            indexingSite(site);
             if (Thread.currentThread().isInterrupted()) {
                 removeUnmappedPages();
             }
-//            System.out.println("Размер списка: " + allPages.size());
             savePages(allPages);
         }
         changeSiteStatus(site);
         saveSite(site);
     }
 
+    private void indexingSite(Site site) {
+        deleteExistSiteAndPagesFromDB(site);
+        site.setDomain(findDomain(site));
+        site.setSubDomain(findSubDomainUrl(site));
+        saveSite(site);
+        Page firstPage = Page.builder()
+                .site(site)
+                .path(site.getSubDomain().concat("/"))
+                .code(0)
+                .content("")
+                .build();
+        allPages.add(firstPage);
+        siteMapper = new SiteMapper(connection, site, firstPage, allPages);
+        fjp.invoke(siteMapper);
+    }
+
     private void changeSiteStatus(Site site) {
         if (Thread.currentThread().isInterrupted()) {
             site.setStatus(Status.FAILED);
-            site.setStatusTime(LocalDateTime.now());
             site.setLastError("Операция прервана пользователем");
         } else {
             site.setStatus(Status.INDEXED);
-            site.setStatusTime(LocalDateTime.now());
         }
+        site.setStatusTime(LocalDateTime.now());
     }
 
     private void removeUnmappedPages() {
@@ -120,36 +119,36 @@ public class IndexingThread extends Thread {
 
     private String findDomain(Site site) {
         String domain = "";
-        Pattern pattern1 = Pattern.compile(Regexes.DOMAIN);
-        Matcher matcher1 = pattern1.matcher(site.getUrl());
-        Pattern pattern2 = Pattern.compile(Regexes.DOMAIN_RU);
-        Matcher matcher2 = pattern2.matcher(site.getUrl());
-        if (matcher1.find()) {
-            domain = matcher1.group(1).trim();
-        } else if (matcher2.find()) {
-            domain = matcher2.group(1).trim();
+        List<String> regexes = Arrays.asList(Regexes.DOMAIN, Regexes.DOMAIN_RU);
+        for (String regex : regexes) {
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(site.getUrl());
+            if (matcher.find()) {
+                domain = matcher.group(1).trim();
+                break;
+            }
         }
         return domain;
     }
 
     private String findSubDomainUrl(Site site) {
         String subDomainUrl = "";
+        List<String> regexes = Arrays.asList(Regexes.SLASH_TEXT_SLASH, Regexes.SLASH_TEXT_SLASH_RU);
         if (site.getUrl().length() - site.getDomain().length() > 1) {
             String secondPartOfUrl = site.getUrl().substring(site.getDomain().length());
-            Pattern pattern1 = Pattern.compile(Regexes.SLASH_TEXT_SLASH);
-            Matcher matcher1 = pattern1.matcher(secondPartOfUrl);
-            Pattern pattern2 = Pattern.compile(Regexes.SLASH_TEXT_SLASH_RU);
-            Matcher matcher2 = pattern2.matcher(secondPartOfUrl);
-            if (matcher1.find()) {
-                subDomainUrl = matcher1.group(1).trim();
-            } else if (matcher2.find()) {
-                subDomainUrl = matcher2.group(1).trim();
+            for (String regex : regexes) {
+                Pattern pattern = Pattern.compile(regex);
+                Matcher matcher = pattern.matcher(secondPartOfUrl);
+                if (matcher.find()) {
+                    subDomainUrl = matcher.group(1).trim();
+                    break;
+                }
             }
         }
         return subDomainUrl;
     }
 
-//    @Transactional
+    @Transactional
     private void addIndexingPage(String addedUrl) {
         Site existSite = siteRepository.findSiteByUrl(siteCfg.getUrl());
         if (existSite != null) {
