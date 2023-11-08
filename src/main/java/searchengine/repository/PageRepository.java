@@ -4,9 +4,10 @@ import org.springframework.stereotype.Repository;
 import searchengine.model.Page;
 
 import java.util.ArrayList;
+import java.util.Optional;
 
 @Repository
 public interface PageRepository extends JpaRepository<Page, Integer> {
-    Page findPageByPathAndSiteId(String path, Integer siteId);
+    Optional<Page> findPageByPathAndSiteId(String path, Integer siteId);
     ArrayList<Page> findPageBySiteId(Integer siteId);
 }

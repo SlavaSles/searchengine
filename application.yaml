@@ -5,7 +5,7 @@ spring:
   datasource:
     username: admin
     password: nimad
-    url: jdbc:mysql://localhost:3306/search_engine_2?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
   #    charset: utf8mb4
   jpa:
     properties:
@@ -38,10 +38,10 @@ indexing-settings:
     #      name: Лютеранский кафедральный собор
     - url: https://поддерживаю.рф
       name: поддерживаю.рф
-    - url: https://adsf.asd
-      name: Несуществующий сайт
-    - url: https://gorvodokanal.com
-      name: Горводоканал г. Новосибирска
+#    - url: https://adsf.asd
+#      name: Несуществующий сайт
+#    - url: https://gorvodokanal.com
+#      name: Горводоканал г. Новосибирска
 #    - url: https://et-cetera.ru/mobile
 #      name: Театр "Et cetera"
 #    По-прежнему не работает обход больших сайтов

@@ -1,4 +1,4 @@
-package searchengine.logic.sitemapping;
+package searchengine.logic.indexing;
 
 import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
@@ -9,14 +9,14 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import searchengine.config.auxclass.Connection;
+import searchengine.model.Index;
+import searchengine.model.Lemma;
 import searchengine.model.Page;
 import searchengine.model.Site;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.RecursiveAction;
 import java.util.regex.Matcher;
@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 
 import static java.lang.Thread.sleep;
 
-public class SiteMapper extends RecursiveAction {
+public class PageIndexer extends RecursiveAction {
     private final String REGEX_SUBDOMAIN_URL_SEARCH;
     private final String REGEX_SUBDOMAIN_URL_RU_SEARCH;
     private final String REGEX_SUBDOMAIN_URL_HTML_SEARCH;
@@ -33,15 +33,21 @@ public class SiteMapper extends RecursiveAction {
     private final Site site;
     private final Page page;
     private final ConcurrentSkipListSet<Page> pages;
+    private final ConcurrentHashMap<String, Lemma> lemmas;
+    private final Set<Index> indices;// = new ConcurrentHashMap<>().newKeySet();
     @Setter
     private static volatile Boolean isInterrupted;
-    private static final Logger LOGGER = LogManager.getLogger(SiteMapper.class);
+    private static final Logger LOGGER = LogManager.getLogger(PageIndexer.class);
 
-    public SiteMapper(Connection connection, Site site, Page page, ConcurrentSkipListSet<Page> pages) {
+//    ToDo: Попробовать исключить Site из конструктора
+    public PageIndexer(Connection connection, Site site, Page page, ConcurrentSkipListSet<Page> pages,
+                       ConcurrentHashMap<String, Lemma> lemmas, Set<Index> indices) {
         this.connection = connection;
         this.site = site;
         this.page = page;
         this.pages = pages;
+        this.lemmas = lemmas;
+        this.indices = indices;
         this.REGEX_SUBDOMAIN_URL_SEARCH = "^(" + site.getSubDomain() +
                 Regexes.SLASH_TEXT_SLASH + Regexes.SEARCH_PARAMS + ")$";
         this.REGEX_SUBDOMAIN_URL_RU_SEARCH = "^(" + site.getSubDomain() +
@@ -55,10 +61,14 @@ public class SiteMapper extends RecursiveAction {
     @Override
     protected void compute() {
         Document doc;
+//        ToDo: Тут слишком много if идут подряд
         if (isInterrupted) {
             return;
         }
         doc = getPage();
+        if (!page.getContent().equals("")) {
+            getLemmasAndIndicesForPage();
+        }
         if (pages.isEmpty()) {
             pages.add(page);
             return;
@@ -72,16 +82,40 @@ public class SiteMapper extends RecursiveAction {
         ConcurrentSkipListSet<Page> newPages = new ConcurrentSkipListSet<>(
                 Comparator.comparing(Page::getPath));
         findUrls(doc, newPages);
-        List<SiteMapper> taskList = new ArrayList<>();
+        List<PageIndexer> taskList = new ArrayList<>();
         for (Page newPage : newPages) {
             if (!isInterrupted) {
-                SiteMapper siteMapperTask = new SiteMapper(connection, site, newPage, pages);
-                siteMapperTask.fork();
-                taskList.add(siteMapperTask);
+                PageIndexer pageIndexerTask = new PageIndexer(connection, site, newPage, pages, lemmas, indices);
+                pageIndexerTask.fork();
+                taskList.add(pageIndexerTask);
             }
         }
-        for (SiteMapper siteMapperTask : taskList) {
-            siteMapperTask.join();
+        for (PageIndexer pageIndexerTask : taskList) {
+            pageIndexerTask.join();
+        }
+    }
+
+    private void getLemmasAndIndicesForPage() {
+        LemmaSearcher lemmaSearcher = new LemmaSearcher();
+        HashMap<String, Integer> lemmasCounter = lemmaSearcher.searchLemmas(page.getContent());
+        for (String pageLemma : lemmasCounter.keySet()) {
+//            ToDo: Тут можно и по другому сделать проверку
+            if (lemmas.containsKey(pageLemma)) {
+                lemmas.get(pageLemma).setFrequency(lemmas.get(pageLemma).getFrequency() + 1);
+            } else {
+                Lemma newLemma = Lemma.builder()
+                        .site(site)
+                        .lemma(pageLemma)
+                        .frequency(1)
+                        .build();
+                lemmas.put(pageLemma, newLemma);
+            }
+            Index newIndex = Index.builder()
+                    .page(page)
+                    .lemma(lemmas.get(pageLemma))
+                    .rank(lemmasCounter.get(pageLemma))
+                    .build();
+            indices.add(newIndex);
         }
     }
 

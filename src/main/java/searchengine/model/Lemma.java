@@ -16,7 +16,7 @@ public class Lemma {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id", columnDefinition = "INT NOT NULL")
     private Site site;
     @Column(columnDefinition = "VARCHAR(255) NOT NULL")

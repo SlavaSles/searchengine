@@ -5,8 +5,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import searchengine.config.SiteCfg;
 import searchengine.config.SitesList;
-import searchengine.logic.sitemapping.IndexingThread;
-import searchengine.logic.sitemapping.SiteMapper;
+import searchengine.logic.indexing.IndexingThread;
+import searchengine.logic.indexing.PageIndexer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +23,7 @@ public class IndexingServiceImpl implements IndexingService {
     public boolean indexing() {
         fjp = new ForkJoinPool();
         if (currentTasks.isEmpty()) {
-            SiteMapper.setIsInterrupted(false);
+            PageIndexer.setIsInterrupted(false);
             for(SiteCfg siteCfg : sites.getSites()) {
                 IndexingThread indexingThread = context.getBean(IndexingThread.class);
                 indexingThread.setSiteCfg(siteCfg);
@@ -39,7 +39,7 @@ public class IndexingServiceImpl implements IndexingService {
 
     public boolean stopIndexing() {
         if (!currentTasks.isEmpty()) {
-            SiteMapper.setIsInterrupted(true);
+            PageIndexer.setIsInterrupted(true);
             for (IndexingThread task : currentTasks) {
                 task.interrupt();
             }
@@ -53,7 +53,7 @@ public class IndexingServiceImpl implements IndexingService {
 
     public boolean indexPage(String url) {
         boolean correctUrl = false;
-        SiteMapper.setIsInterrupted(false);
+        PageIndexer.setIsInterrupted(false);
         for(SiteCfg siteCfg : sites.getSites()) {
             if (url.startsWith(siteCfg.getUrl().concat("/"))) {
                 IndexingThread indexingThread = context.getBean(IndexingThread.class);
