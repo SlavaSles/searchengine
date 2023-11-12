@@ -28,7 +28,7 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity<?> startIndexing() {
-        if (indexingService.indexing()) {
+        if (indexingService.startIndexing()) {
             return ResponseEntity.ok( new SuccessResponse());
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ErrorMessage.START_INDEXING_ERROR));

@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,16 +35,15 @@ public class PageIndexer extends RecursiveAction {
     private final Page page;
     private final ConcurrentSkipListSet<Page> pages;
     private final ConcurrentHashMap<String, Lemma> lemmas;
-    private final Set<Index> indices;// = new ConcurrentHashMap<>().newKeySet();
+    private final Set<Index> indices;
     @Setter
     private static volatile Boolean isInterrupted;
     private static final Logger LOGGER = LogManager.getLogger(PageIndexer.class);
 
-//    ToDo: Попробовать исключить Site из конструктора
-    public PageIndexer(Connection connection, Site site, Page page, ConcurrentSkipListSet<Page> pages,
+    public PageIndexer(Connection connection, Page page, ConcurrentSkipListSet<Page> pages,
                        ConcurrentHashMap<String, Lemma> lemmas, Set<Index> indices) {
         this.connection = connection;
-        this.site = site;
+        this.site = page.getSite();
         this.page = page;
         this.pages = pages;
         this.lemmas = lemmas;
@@ -60,23 +60,15 @@ public class PageIndexer extends RecursiveAction {
 
     @Override
     protected void compute() {
-        Document doc;
-//        ToDo: Тут слишком много if идут подряд
-        if (isInterrupted) {
-            return;
-        }
-        doc = getPage();
-        if (!page.getContent().equals("")) {
+        Document doc = getPage();
+        if (!page.getContent().equals("") && page.getCode() != 404) {
             getLemmasAndIndicesForPage();
         }
         if (pages.isEmpty()) {
             pages.add(page);
             return;
         }
-        if (doc == null) {
-            return;
-        }
-        if (isInterrupted) {
+        if (doc == null || isInterrupted) {
             return;
         }
         ConcurrentSkipListSet<Page> newPages = new ConcurrentSkipListSet<>(
@@ -85,38 +77,51 @@ public class PageIndexer extends RecursiveAction {
         List<PageIndexer> taskList = new ArrayList<>();
         for (Page newPage : newPages) {
             if (!isInterrupted) {
-                PageIndexer pageIndexerTask = new PageIndexer(connection, site, newPage, pages, lemmas, indices);
+                PageIndexer pageIndexerTask = new PageIndexer(connection, newPage, pages, lemmas, indices);
                 pageIndexerTask.fork();
                 taskList.add(pageIndexerTask);
             }
         }
-        for (PageIndexer pageIndexerTask : taskList) {
-            pageIndexerTask.join();
-        }
+        taskList.forEach(ForkJoinTask::join);
     }
 
     private void getLemmasAndIndicesForPage() {
-        LemmaSearcher lemmaSearcher = new LemmaSearcher();
+        LemmaSearcher lemmaSearcher = new LemmaSearcherImpl();
         HashMap<String, Integer> lemmasCounter = lemmaSearcher.searchLemmas(page.getContent());
         for (String pageLemma : lemmasCounter.keySet()) {
-//            ToDo: Тут можно и по другому сделать проверку
             if (lemmas.containsKey(pageLemma)) {
                 lemmas.get(pageLemma).setFrequency(lemmas.get(pageLemma).getFrequency() + 1);
             } else {
-                Lemma newLemma = Lemma.builder()
-                        .site(site)
-                        .lemma(pageLemma)
-                        .frequency(1)
-                        .build();
+                Lemma newLemma = createNewLemma(pageLemma);
                 lemmas.put(pageLemma, newLemma);
             }
-            Index newIndex = Index.builder()
-                    .page(page)
-                    .lemma(lemmas.get(pageLemma))
-                    .rank(lemmasCounter.get(pageLemma))
-                    .build();
-            indices.add(newIndex);
+            indices.add(createNewIndex(lemmas.get(pageLemma), lemmasCounter.get(pageLemma)));
         }
+    }
+
+    private Index createNewIndex(Lemma lemma, Integer count) {
+        return Index.builder()
+                .page(page)
+                .lemma(lemma)
+                .rank(count)
+                .build();
+    }
+
+    private Lemma createNewLemma(String pageLemma) {
+        return Lemma.builder()
+                .site(site)
+                .lemma(pageLemma)
+                .frequency(1)
+                .build();
+    }
+
+    private Page createNewPage(String path) {
+        return Page.builder()
+                .site(site)
+                .path(path)
+                .code(0)
+                .content("")
+                .build();
     }
 
     private Document getPage() {
@@ -127,7 +132,7 @@ public class PageIndexer extends RecursiveAction {
             sleep(300);
             LOGGER.info("Обращение по адресу: " + site.getDomain().concat(page.getPath()));
             doc = Jsoup.connect(site.getDomain().concat(page.getPath()))
-                    .userAgent(connection.getUserAgents().get(selectAgent()).getAgent())
+                    .userAgent(selectAgent())
                     .referrer(connection.getReferrer())
                     .timeout(10000)
                     .followRedirects(false)
@@ -146,10 +151,10 @@ public class PageIndexer extends RecursiveAction {
         return doc;
     }
 
-    private int selectAgent() {
+    private String selectAgent() {
         String threadName = Thread.currentThread().getName();
         int threadNumber = Integer.parseInt(threadName.substring(threadName.length() - 1));
-        return threadNumber % 2;
+        return connection.getUserAgents().get(threadNumber % 2).getAgent();
     }
 
     private int getStatus(String message) {
@@ -166,15 +171,10 @@ public class PageIndexer extends RecursiveAction {
         Elements links = doc.select("a");
         links.forEach(link -> {
                     if (!isInterrupted) {
-                        String urlLink = urlMatching(link);
+                        String urlLink = matchUrls(link);
                         int urlLevel = calculateUrlLevel(urlLink);
                         if (!page.getPath().equals(urlLink) && ((urlLevel - subUrlLevel) >= 0)) {
-                            Page findPage = Page.builder()
-                                    .site(site)
-                                    .path(urlLink)
-                                    .code(0)
-                                    .content("")
-                                    .build();
+                            Page findPage = createNewPage(urlLink);
                             if (!pages.contains(findPage)) {
                                 pages.add(findPage);
                                 newPages.add(findPage);
@@ -189,7 +189,7 @@ public class PageIndexer extends RecursiveAction {
         return url.length() - url.replaceAll("/","").length();
     }
 
-    private String urlMatching(Element link) {
+    private String matchUrls(Element link) {
         String textLink = link.attr("href");
         String urlLink = "";
         List<String> regexes = Arrays.asList(REGEX_SUBDOMAIN_URL_SEARCH, REGEX_SUBDOMAIN_URL_HTML_SEARCH,

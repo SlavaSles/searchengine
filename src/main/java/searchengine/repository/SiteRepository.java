@@ -8,5 +8,4 @@ import java.util.Optional;
 @Repository
 public interface SiteRepository extends JpaRepository<Site, Integer> {
     Optional<Site> findSiteByUrl(String url);
-//    Site findSById(Integer id);
 }

@@ -8,6 +8,6 @@ import java.util.Optional;
 
 @Repository
 public interface PageRepository extends JpaRepository<Page, Integer> {
-    Optional<Page> findPageByPathAndSiteId(String path, Integer siteId);
+    Optional<Page> findPageBySiteIdAndPath(Integer siteId, String path);
     ArrayList<Page> findPageBySiteId(Integer siteId);
 }

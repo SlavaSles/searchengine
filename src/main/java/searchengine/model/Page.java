@@ -3,6 +3,8 @@ package searchengine.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.Objects;
+
 @Builder
 @Data
 @NoArgsConstructor
@@ -23,4 +25,16 @@ public class Page {
     private Integer code;
     @Column(columnDefinition = "MEDIUMTEXT NOT NULL")
     private String content;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Page page)) return false;
+        return site.equals(page.site) && path.equals(page.path);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(site, path);
+    }
 }

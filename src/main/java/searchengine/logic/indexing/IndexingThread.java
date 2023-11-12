@@ -49,6 +49,23 @@ public class IndexingThread extends Thread {
             addIndexingPage(addedUrl);
             return;
         }
+        Site site = createNewSite();
+        deleteIndexFromDbForExistSite(site);
+        saveSite(site);
+        if (!Thread.currentThread().isInterrupted()) {
+            indexSite(site);
+            if (Thread.currentThread().isInterrupted()) {
+                removeUnmappedPages();
+            }
+        }
+        savePages();
+        saveLemmas();
+        saveIndices();
+        changeSiteStatus(site);
+        saveSite(site);
+    }
+
+    private Site createNewSite() {
         Site site = Site.builder()
                 .status(Status.INDEXING)
                 .statusTime(LocalDateTime.now())
@@ -56,32 +73,24 @@ public class IndexingThread extends Thread {
                 .url(siteCfg.getUrl())
                 .name(siteCfg.getName())
                 .build();
-        if (!Thread.currentThread().isInterrupted()) {
-            indexingSite(site);
-            if (Thread.currentThread().isInterrupted()) {
-                removeUnmappedPages();
-            }
-        }
-        savePages(allPages);
-        saveLemmas(allLemmas);
-        saveIndices(allIndices);
-        changeSiteStatus(site);
-        saveSite(site);
-    }
-
-    private void indexingSite(Site site) {
-        deleteIndexFromDbForExistSite(site);
         site.setDomain(findDomain(site));
         site.setSubDomain(findSubDomainUrl(site));
-        saveSite(site);
-        Page firstPage = Page.builder()
+        return site;
+    }
+
+    private Page createNewPage(Site site, String path) {
+        return Page.builder()
                 .site(site)
-                .path(site.getSubDomain().concat("/"))
+                .path(path)
                 .code(0)
                 .content("")
                 .build();
+    }
+
+    private void indexSite(Site site) {
+        Page firstPage = createNewPage(site, site.getSubDomain().concat("/"));
         allPages.add(firstPage);
-        pageIndexer = new PageIndexer(connection, site, firstPage, allPages, allLemmas, allIndices);
+        pageIndexer = new PageIndexer(connection, firstPage, allPages, allLemmas, allIndices);
         fjp.invoke(pageIndexer);
     }
 
@@ -106,19 +115,19 @@ public class IndexingThread extends Thread {
     }
 
     @Transactional
-    private void savePages(ConcurrentSkipListSet<Page> allPages) {
+    private void savePages() {
         pageRepository.flush();
         pageRepository.saveAll(allPages);
     }
 
     @Transactional
-    private void saveLemmas(ConcurrentHashMap<String, Lemma> allLemmas) {
+    private void saveLemmas() {
         lemmaRepository.flush();
         lemmaRepository.saveAll(allLemmas.values());
     }
 
     @Transactional
-    private void saveIndices(Set<Index> allIndices) {
+    private void saveIndices() {
         indexRepository.flush();
         indexRepository.saveAll(allIndices);
     }
@@ -128,7 +137,7 @@ public class IndexingThread extends Thread {
         Optional<Site> existSiteOpt = siteRepository.findSiteByUrl(site.getUrl());
         if (existSiteOpt.isPresent()) {
             ArrayList<Page> pages = pageRepository.findPageBySiteId(existSiteOpt.get().getId());
-            pages.forEach(page -> deleteExistIndices(page));
+            pages.forEach(this::deleteExistIndices);
             deleteExistLemmas(existSiteOpt.get());
             pageRepository.deleteAll(pages);
             siteRepository.delete(existSiteOpt.get());
@@ -149,7 +158,7 @@ public class IndexingThread extends Thread {
 
     private String findDomain(Site site) {
         List<String> regexes = Arrays.asList(Regexes.DOMAIN, Regexes.DOMAIN_RU);
-        return matchingUrlParts(site.getUrl(), regexes);
+        return matchUrlParts(site.getUrl(), regexes);
     }
 
     private String findSubDomainUrl(Site site) {
@@ -157,10 +166,10 @@ public class IndexingThread extends Thread {
         if (site.getUrl().length() - site.getDomain().length() <= 1) {
             return "";
         }
-        return matchingUrlParts(site.getUrl().substring(site.getDomain().length()), regexes);
+        return matchUrlParts(site.getUrl().substring(site.getDomain().length()), regexes);
     }
 
-    private String matchingUrlParts(String text, List<String> regexes) {
+    private String matchUrlParts(String text, List<String> regexes) {
         for (String regex : regexes) {
             Pattern pattern = Pattern.compile(regex);
             Matcher matcher = pattern.matcher(text);
@@ -171,79 +180,74 @@ public class IndexingThread extends Thread {
         return "";
     }
 
-//    @Transactional
     private void addIndexingPage(String addedUrl) {
-//        ToDo: Перенести код по работе с БД в отдельные Transactional методы
-        Site site;
-        Page addedPage = null;
         String addedPath = addedUrl.substring(siteCfg.getUrl().length());
-        Optional<Site> existSiteOpt = siteRepository.findSiteByUrl(siteCfg.getUrl());
-        if (existSiteOpt.isPresent()) {
-            site = existSiteOpt.get();
-            Optional<Page> addedPageOpt = pageRepository.findPageByPathAndSiteId(addedPath, site.getId());
-            if (addedPageOpt.isPresent()) {
-                addedPage = addedPageOpt.get();
-                changeLemmasAndIndicesForExistPage(addedPage);
-            }
-        } else {
-            site = Site.builder()
-                    .status(Status.INDEXING)
-                    .statusTime(LocalDateTime.now())
-                    .lastError(null)
-                    .url(siteCfg.getUrl())
-                    .name(siteCfg.getName())
-                    .build();
-            saveSite(site);
+        Site site = findSiteByUrl();
+        saveSite(site);
+        Page addedPage = findPageByPathAndSiteId(site, addedPath);
+        if (addedPage.getId() != null) {
+            changeLemmasAndIndicesForExistPage(addedPage);
         }
-        site.setDomain(findDomain(site));
-        site.setSubDomain(findSubDomainUrl(site));
-        if (addedPage == null) {
-            addedPage = Page.builder()
-                    .site(site)
-                    .path(addedPath)
-                    .code(0)
-                    .content("")
-                    .build();
-        }
-        pageIndexer = new PageIndexer(connection, site, addedPage, allPages, allLemmas, allIndices);
+        pageIndexer = new PageIndexer(connection, addedPage, allPages, allLemmas, allIndices);
         pageIndexer.compute();
-        savePages(allPages);
-        updateLemmas(allLemmas);
-        saveIndices(allIndices);
+        savePages();
+        updateLemmas(site);
+        saveIndices();
         changeSiteStatus(site);
         saveSite(site);
     }
 
     @Transactional
+    private Site findSiteByUrl() {
+        Optional<Site> existSiteOpt = siteRepository.findSiteByUrl(siteCfg.getUrl());
+        if (existSiteOpt.isPresent()) {
+            Site site = existSiteOpt.get();
+            site.setStatus(Status.INDEXING);
+            site.setDomain(findDomain(site));
+            site.setSubDomain(findSubDomainUrl(site));
+            return site;
+        } else {
+            return createNewSite();
+        }
+    }
+
+    @Transactional
+    private Page findPageByPathAndSiteId(Site site, String path) {
+        Optional<Page> addedPageOpt = pageRepository.findPageBySiteIdAndPath(site.getId(), path);
+        if (addedPageOpt.isPresent()) {
+            Page addedPage = addedPageOpt.get();
+            addedPage.setSite(site);
+            return addedPage;
+        } else {
+            return createNewPage(site, path);
+        }
+    }
+
+    @Transactional
     private void changeLemmasAndIndicesForExistPage(Page existPage) {
-//        ToDo: Изменить статус страницы на Indexing
         ArrayList<Index> indices = indexRepository.findIndexByPageId(existPage.getId());
-        ArrayList<Lemma> lemmas = new ArrayList<>();
+        lemmaRepository.flush();
         for (Index index : indices) {
             Optional<Lemma> lemmaOpt = lemmaRepository.findById(index.getLemma().getId());
             if (lemmaOpt.isPresent()) {
-                lemmaOpt.get().setFrequency(lemmaOpt.get().getFrequency() - 1);
-                lemmas.add(lemmaOpt.get());
+                Lemma updatedLemma = lemmaOpt.get();
+                updatedLemma.setFrequency(updatedLemma.getFrequency() - 1);
+                lemmaRepository.save(updatedLemma);
             }
         }
-        lemmaRepository.flush();
-        lemmaRepository.saveAll(lemmas);
         indexRepository.deleteAll(indices);
     }
 
     @Transactional
-    private void updateLemmas(ConcurrentHashMap<String, Lemma> allLemmas) {
-        ArrayList<Lemma> updatedLemmas = new ArrayList<>();
-        for (Lemma lemma : allLemmas.values()) {
-            Optional<Lemma> lemmaOpt = lemmaRepository.findLemmaByLemma(lemma.getLemma());
-            if (lemmaOpt.isPresent()) {
-                lemmaOpt.get().setFrequency(lemmaOpt.get().getFrequency() + 1);
-                updatedLemmas.add(lemmaOpt.get());
-            } else {
-                updatedLemmas.add(lemma);
-            }
-        }
+    private void updateLemmas(Site site) {
         lemmaRepository.flush();
-        lemmaRepository.saveAll(updatedLemmas);
+        for (Lemma lemma : allLemmas.values()) {
+            Optional<Lemma> lemmaOpt = lemmaRepository.findLemmaBySiteIdAndLemma(site.getId(), lemma.getLemma());
+            if (lemmaOpt.isPresent()) {
+                lemma.setId(lemmaOpt.get().getId());
+                lemma.setFrequency(lemmaOpt.get().getFrequency() + 1);
+            }
+            lemmaRepository.save(lemma); // Перед сохранением леммы почему-то идет select запрос, к которому join-ятся поля из таблиц site и page
+        }
     }
 }

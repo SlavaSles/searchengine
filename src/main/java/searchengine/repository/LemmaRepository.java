@@ -7,6 +7,6 @@ import java.util.ArrayList;
 import java.util.Optional;
 
 public interface LemmaRepository extends JpaRepository<Lemma, Integer> {
-    Optional<Lemma> findLemmaByLemma(String lemma);
+    Optional<Lemma> findLemmaBySiteIdAndLemma(Integer siteId, String lemma);
     ArrayList<Lemma> findLemmaBySiteId(Integer siteId);
 }

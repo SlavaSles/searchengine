@@ -20,13 +20,12 @@ public class IndexingServiceImpl implements IndexingService {
     private final List<IndexingThread> currentTasks = new ArrayList<>();
     private ForkJoinPool fjp;
 
-    public boolean indexing() {
+    public boolean startIndexing() {
         fjp = new ForkJoinPool();
         if (currentTasks.isEmpty()) {
             PageIndexer.setIsInterrupted(false);
             for(SiteCfg siteCfg : sites.getSites()) {
-                IndexingThread indexingThread = context.getBean(IndexingThread.class);
-                indexingThread.setSiteCfg(siteCfg);
+                IndexingThread indexingThread = getIndexingThread(siteCfg);
                 indexingThread.setFjp(fjp);
                 currentTasks.add(indexingThread);
                 indexingThread.start();
@@ -56,8 +55,7 @@ public class IndexingServiceImpl implements IndexingService {
         PageIndexer.setIsInterrupted(false);
         for(SiteCfg siteCfg : sites.getSites()) {
             if (url.startsWith(siteCfg.getUrl().concat("/"))) {
-                IndexingThread indexingThread = context.getBean(IndexingThread.class);
-                indexingThread.setSiteCfg(siteCfg);
+                IndexingThread indexingThread = getIndexingThread(siteCfg);
                 indexingThread.setAddedUrl(url);
                 indexingThread.start();
                 correctUrl = true;
@@ -65,5 +63,11 @@ public class IndexingServiceImpl implements IndexingService {
             }
         }
         return correctUrl;
+    }
+
+    private IndexingThread getIndexingThread(SiteCfg siteCfg) {
+        IndexingThread indexingThread = context.getBean(IndexingThread.class);
+        indexingThread.setSiteCfg(siteCfg);
+        return indexingThread;
     }
 }
