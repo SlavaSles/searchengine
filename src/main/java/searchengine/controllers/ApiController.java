@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import searchengine.dto.indexing.Response;
 import searchengine.dto.indexing.message.ErrorMessage;
 import searchengine.dto.indexing.ErrorResponse;
 import searchengine.dto.indexing.SuccessResponse;
@@ -27,7 +28,7 @@ public class ApiController {
     }
 
     @GetMapping("/startIndexing")
-    public ResponseEntity<?> startIndexing() {
+    public ResponseEntity<Response> startIndexing() {
         if (indexingService.startIndexing()) {
             return ResponseEntity.ok( new SuccessResponse());
         }
@@ -35,7 +36,7 @@ public class ApiController {
     }
 
     @GetMapping("/stopIndexing")
-    public ResponseEntity<?> stopIndexing() {
+    public ResponseEntity<Response> stopIndexing() {
         if (indexingService.stopIndexing()) {
             return ResponseEntity.ok(new SuccessResponse());
         }
@@ -43,7 +44,7 @@ public class ApiController {
     }
 
     @PostMapping("/indexPage")
-    public ResponseEntity<?> indexPage(String url) {
+    public ResponseEntity<Response> indexPage(String url) {
         if (indexingService.indexPage(url)) {
             return ResponseEntity.ok(new SuccessResponse());
         }

@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Getter
-public class ErrorResponse {
+public class ErrorResponse extends Response {
     private final boolean result = false;
     private final String error;
 }

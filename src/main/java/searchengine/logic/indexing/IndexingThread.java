@@ -100,6 +100,7 @@ public class IndexingThread extends Thread {
             site.setLastError("Операция прервана пользователем");
         } else {
             site.setStatus(Status.INDEXED);
+            site.setLastError(null);
         }
         site.setStatusTime(LocalDateTime.now());
     }
@@ -197,7 +198,6 @@ public class IndexingThread extends Thread {
         saveSite(site);
     }
 
-    @Transactional
     private Site findSiteByUrl() {
         Optional<Site> existSiteOpt = siteRepository.findSiteByUrl(siteCfg.getUrl());
         if (existSiteOpt.isPresent()) {
@@ -211,7 +211,6 @@ public class IndexingThread extends Thread {
         }
     }
 
-    @Transactional
     private Page findPageByPathAndSiteId(Site site, String path) {
         Optional<Page> addedPageOpt = pageRepository.findPageBySiteIdAndPath(site.getId(), path);
         if (addedPageOpt.isPresent()) {
