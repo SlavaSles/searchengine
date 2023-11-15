@@ -38,18 +38,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         for (SiteCfg siteCfg : sites.getSites()) {
             Optional<Site> siteOpt = siteRepository.findSiteByUrl(siteCfg.getUrl());
             if (siteOpt.isPresent()) {
-                Site site = siteOpt.get();
-                DetailedStatisticsItem siteStatistic = DetailedStatisticsItem.builder()
-                        .url(siteCfg.getUrl())
-                        .name(siteCfg.getName())
-                        .status(site.getStatus().toString())
-                        .statusTime(site.getStatusTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
-                        .build();
-                if (site.getLastError() != null) {
-                    siteStatistic.setError(site.getLastError());
-                }
-                siteStatistic.setPages(pageRepository.countPages(site.getId()));
-                siteStatistic.setLemmas(lemmaRepository.countLemmas(site.getId()));
+                DetailedStatisticsItem siteStatistic = getDetailStatistic(siteOpt.get());
                 detailed.add(siteStatistic);
                 total.setSites(total.getSites() + 1);
                 total.setPages(total.getPages() + siteStatistic.getPages());
@@ -64,6 +53,18 @@ public class StatisticsServiceImpl implements StatisticsService {
         return StatisticsResponse.builder()
                 .result(true)
                 .statistics(data)
+                .build();
+    }
+
+    private DetailedStatisticsItem getDetailStatistic(Site site) {
+        return DetailedStatisticsItem.builder()
+                .url(site.getUrl())
+                .name(site.getName())
+                .status(site.getStatus().toString())
+                .statusTime(site.getStatusTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+                .error(site.getLastError())
+                .pages(pageRepository.countPages(site.getId()))
+                .lemmas(lemmaRepository.countLemmas(site.getId()))
                 .build();
     }
 }

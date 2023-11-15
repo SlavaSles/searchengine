@@ -17,12 +17,13 @@ import java.util.concurrent.ForkJoinPool;
 public class IndexingServiceImpl implements IndexingService {
     private final ApplicationContext context;
     private final SitesList sites;
-    private final List<IndexingThread> currentTasks = new ArrayList<>();
+    private final List<Thread> currentTasks = new ArrayList<>();
     private ForkJoinPool fjp;
 
     public boolean startIndexing() {
         fjp = new ForkJoinPool();
         if (currentTasks.isEmpty()) {
+            currentTasks.add(new Thread(System.out::println));
             PageIndexer.setIsInterrupted(false);
             for(SiteCfg siteCfg : sites.getSites()) {
                 IndexingThread indexingThread = getIndexingThread(siteCfg);
@@ -39,7 +40,7 @@ public class IndexingServiceImpl implements IndexingService {
     public boolean stopIndexing() {
         if (!currentTasks.isEmpty()) {
             PageIndexer.setIsInterrupted(true);
-            for (IndexingThread task : currentTasks) {
+            for (Thread task : currentTasks) {
                 task.interrupt();
             }
             fjp.shutdown();

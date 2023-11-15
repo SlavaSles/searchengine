@@ -54,9 +54,7 @@ public class IndexingThread extends Thread {
         saveSite(site);
         if (!Thread.currentThread().isInterrupted()) {
             indexSite(site);
-            if (Thread.currentThread().isInterrupted()) {
-                removeUnmappedPages();
-            }
+            removeUnmappedPages();
         }
         savePages();
         saveLemmas();
@@ -106,35 +104,37 @@ public class IndexingThread extends Thread {
     }
 
     private void removeUnmappedPages() {
-        allPages.removeIf(page -> page.getCode() == 0);
+        if (Thread.currentThread().isInterrupted()) {
+            allPages.removeIf(page -> page.getCode() == 0);
+        }
     }
 
     @Transactional
-    private void saveSite(Site site) {
+    public void saveSite(Site site) {
         siteRepository.flush();
         siteRepository.save(site);
     }
 
     @Transactional
-    private void savePages() {
+    public void savePages() {
         pageRepository.flush();
         pageRepository.saveAll(allPages);
     }
 
     @Transactional
-    private void saveLemmas() {
+    public void saveLemmas() {
         lemmaRepository.flush();
         lemmaRepository.saveAll(allLemmas.values());
     }
 
     @Transactional
-    private void saveIndices() {
+    public void saveIndices() {
         indexRepository.flush();
         indexRepository.saveAll(allIndices);
     }
 
     @Transactional
-    private void deleteIndexFromDbForExistSite(Site site) {
+    public void deleteIndexFromDbForExistSite(Site site) {
         Optional<Site> existSiteOpt = siteRepository.findSiteByUrl(site.getUrl());
         if (existSiteOpt.isPresent()) {
             ArrayList<Page> pages = pageRepository.findPageBySiteId(existSiteOpt.get().getId());
@@ -146,13 +146,13 @@ public class IndexingThread extends Thread {
     }
 
     @Transactional
-    private void deleteExistIndices(Page page) {
+    public void deleteExistIndices(Page page) {
         ArrayList<Index> indices = indexRepository.findIndexByPageId(page.getId());
         indexRepository.deleteAll(indices);
     }
 
     @Transactional
-    private void deleteExistLemmas(Site site) {
+    public void deleteExistLemmas(Site site) {
         ArrayList<Lemma> lemmas = lemmaRepository.findLemmaBySiteId(site.getId());
         lemmaRepository.deleteAll(lemmas);
     }
@@ -223,7 +223,7 @@ public class IndexingThread extends Thread {
     }
 
     @Transactional
-    private void changeLemmasAndIndicesForExistPage(Page existPage) {
+    public void changeLemmasAndIndicesForExistPage(Page existPage) {
         ArrayList<Index> indices = indexRepository.findIndexByPageId(existPage.getId());
         lemmaRepository.flush();
         for (Index index : indices) {
@@ -238,7 +238,7 @@ public class IndexingThread extends Thread {
     }
 
     @Transactional
-    private void updateLemmas(Site site) {
+    public void updateLemmas(Site site) {
         lemmaRepository.flush();
         for (Lemma lemma : allLemmas.values()) {
             Optional<Lemma> lemmaOpt = lemmaRepository.findLemmaBySiteIdAndLemma(site.getId(), lemma.getLemma());
@@ -246,7 +246,7 @@ public class IndexingThread extends Thread {
                 lemma.setId(lemmaOpt.get().getId());
                 lemma.setFrequency(lemmaOpt.get().getFrequency() + 1);
             }
-            lemmaRepository.save(lemma); // Перед сохранением леммы почему-то идет select запрос, к которому join-ятся поля из таблиц site и page
+            lemmaRepository.save(lemma);
         }
     }
 }

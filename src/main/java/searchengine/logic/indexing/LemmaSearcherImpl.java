@@ -13,7 +13,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class LemmaSearcherImpl implements LemmaSearcher {
-    HashMap<String, Integer> lemmasCounter = new HashMap<>();
+    private final HashMap<String, Integer> lemmasCounter = new HashMap<>();
+    private final String[] REGEXES = new String[] {"[A-Za-z]", "[А-ЯЁа-яё]"};
 
     public LemmaSearcherImpl() {
     }
@@ -32,34 +33,29 @@ public class LemmaSearcherImpl implements LemmaSearcher {
             return lemmasCounter;
         }
         LuceneMorphology[] luceneMorphologies = new LuceneMorphology[] {engLuceneMorphology, ruLuceneMorphology};
-        lemmasCounter = findAndCountLemmas(words, luceneMorphologies);
-//        for (Map.Entry<String, Integer> entry : lemmasCounter.entrySet()) {
-//            System.out.println(entry.getKey() + " - " + entry.getValue());
-//        }
-        return lemmasCounter;
-    }
-
-    private HashMap<String, Integer> findAndCountLemmas(String[] words, LuceneMorphology[] luceneMorphologies) {
-        String[] regexes = new String[] {"[A-Za-z]", "[А-ЯЁа-яё]"};
         for (String word : words) {
-            if (word.length() > 0) {
-                for (int i = 0; i <= 1; i++) {
-                    Optional<String> wordOpt = Optional.empty();
-                    Pattern pattern = Pattern.compile(regexes[i]);
-                    Matcher matcher = pattern.matcher(word);
-                    if (matcher.find()) {
-                        String oneLanguageText = word.replaceAll(regexes[regexes.length - i - 1], "");
-                        wordOpt = findWordBaseForm(oneLanguageText, luceneMorphologies[i]);
-                    }
-                    if (wordOpt.isPresent()) {
-                        String lemma = wordOpt.get();
-                        lemmasCounter.put(lemma, lemmasCounter.containsKey(lemma) ?
-                                (lemmasCounter.get(lemma) + 1) : 1);
-                    }
-                }
+            if (!word.isEmpty()) {
+                findAndCountLemmas(word, luceneMorphologies);
             }
         }
         return lemmasCounter;
+    }
+
+    private void findAndCountLemmas(String word, LuceneMorphology[] luceneMorphologies) {
+        for (int i = 0; i <= 1; i++) {
+            Optional<String> wordOpt = Optional.empty();
+            Pattern pattern = Pattern.compile(REGEXES[i]);
+            Matcher matcher = pattern.matcher(word);
+            if (matcher.find()) {
+                String oneLanguageText = word.replaceAll(REGEXES[REGEXES.length - i - 1], "");
+                wordOpt = findWordBaseForm(oneLanguageText, luceneMorphologies[i]);
+            }
+            if (wordOpt.isPresent()) {
+                String lemma = wordOpt.get();
+                lemmasCounter.put(lemma, lemmasCounter.containsKey(lemma) ?
+                        (lemmasCounter.get(lemma) + 1) : 1);
+            }
+        }
     }
 
     private Optional<String> findWordBaseForm(String text, LuceneMorphology luceneMorphology) {
@@ -68,14 +64,14 @@ public class LemmaSearcherImpl implements LemmaSearcher {
                     .filter((t) -> !t.contains("PREP") && !t.contains("PN") && !t.contains("ARTICLE")
                             && !t.contains("PRON") && !t.contains("CONJ") && !t.contains("PART"))
                     .map((wordInfo) -> wordInfo.substring(0, wordInfo.indexOf("|")))
-                    .filter((t) -> t.length() > 0 && !t.equals("s"))
+                    .filter((t) -> !t.isEmpty() && !t.equals("s"))
                     .findFirst();
         } else {
             return luceneMorphology.getMorphInfo(text.toLowerCase()).stream()
                     .filter((t) -> !t.contains("МЕЖД") && !t.contains("СОЮЗ")
                             && !t.contains("ПРЕДЛ") && !t.contains("ЧАСТ") && !t.contains("МС"))
                     .map((wordInfo) -> wordInfo.substring(0, wordInfo.indexOf("|")))
-                    .filter((t) -> t.length() > 0)
+                    .filter((t) -> !t.isEmpty())
                     .findFirst();
         }
     }

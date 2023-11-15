@@ -61,7 +61,7 @@ public class PageIndexer extends RecursiveAction {
     @Override
     protected void compute() {
         Document doc = getPage();
-        if (!page.getContent().equals("") && page.getCode() != 404) {
+        if (!page.getContent().isEmpty() && (page.getCode() != 404)) {
             getLemmasAndIndicesForPage();
         }
         if (pages.isEmpty()) {
@@ -169,24 +169,26 @@ public class PageIndexer extends RecursiveAction {
     private void findUrls(Document doc, ConcurrentSkipListSet<Page> newPages) {
         int subUrlLevel = calculateUrlLevel(page.getPath());
         Elements links = doc.select("a");
-        links.forEach(link -> {
-                    if (!isInterrupted) {
-                        String urlLink = matchUrls(link);
-                        int urlLevel = calculateUrlLevel(urlLink);
-                        if (!page.getPath().equals(urlLink) && ((urlLevel - subUrlLevel) >= 0)) {
-                            Page findPage = createNewPage(urlLink);
-                            if (!pages.contains(findPage)) {
-                                pages.add(findPage);
-                                newPages.add(findPage);
-                            }
-                        }
-                    }
-                }
-        );
+        links.forEach(link -> checkLink(link, subUrlLevel, newPages));
     }
 
     private int calculateUrlLevel(String url) {
         return url.length() - url.replaceAll("/","").length();
+    }
+
+    private void checkLink(Element link, int subUrlLevel, ConcurrentSkipListSet<Page> newPages) {
+        if (isInterrupted) {
+            return;
+        }
+        String urlLink = matchUrls(link);
+        int urlLevel = calculateUrlLevel(urlLink);
+        if (!page.getPath().equals(urlLink) && ((urlLevel - subUrlLevel) >= 0)) {
+            Page foundPage = createNewPage(urlLink);
+            if (!pages.contains(foundPage)) {
+                pages.add(foundPage);
+                newPages.add(foundPage);
+            }
+        }
     }
 
     private String matchUrls(Element link) {
