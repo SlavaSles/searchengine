@@ -5,6 +5,7 @@ import lombok.*;
 
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.Set;
 
 @Builder
@@ -35,4 +36,16 @@ public class Site {
     private String domain;
     @Transient
     private String subDomain;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Site site)) return false;
+        return url.equals(site.url) && name.equals(site.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(url, name);
+    }
 }

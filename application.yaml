@@ -1,50 +1,50 @@
 server:
   port: 8080
 
+
 spring:
   datasource:
     username: admin
     password: nimad
-    url: jdbc:mysql://localhost:3306/search_engine_2?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
   #    charset: utf8mb4
   jpa:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-    #        jdbc:
-    #          batch_size: 500
+#        generate_statistic: true
+#        order_inserts: true
+#        order_updates: true
+#        jdbc:
+#          batch_size: 500
     hibernate:
       ddl-auto: update
     show-sql: true
 
-#        order_inserts: true
-#        order_updates: true
-
 indexing-settings:
   sites:
-    #    - url: https://www.lenta.ru
-    #      name: Лента.ру
-    #    - url: https://www.skillbox.ru
-    #      name: Skillbox
-    #    - url: https://www.playback.ru
-    #      name: PlayBack.Ru
-    #    - url: https://radiomv.ru
-    #      name: Радио милицейская волна
-    #    - url: https://ipfran.ru
-    #      name: Институт прикладной физики РАН
-    #    - url: https://www.svetlovka.ru
-    #      name: Молодежная библиотека им. Светлова
-    #    - url: https://www.lutherancathedral.ru
-    #      name: Лютеранский кафедральный собор
+#    - url: https://www.lenta.ru
+#      name: Лента.ру
+#    - url: https://www.skillbox.ru
+#      name: Skillbox
+#    - url: https://www.playback.ru
+#      name: PlayBack.Ru
+#    - url: https://radiomv.ru
+#      name: Радио милицейская волна
+#    - url: https://ipfran.ru
+#      name: Институт прикладной физики РАН
+    - url: https://www.svetlovka.ru
+      name: Молодежная библиотека им. Светлова
+    - url: https://www.lutherancathedral.ru
+      name: Лютеранский кафедральный собор
     - url: https://поддерживаю.рф
       name: поддерживаю.рф
-    - url: https://adsf.asd
-      name: Несуществующий сайт
-    - url: https://gorvodokanal.com
-      name: Горводоканал г. Новосибирска
+#    - url: https://adsf.asd
+#      name: Несуществующий сайт
+#    - url: https://gorvodokanal.com
+#      name: Горводоканал г. Новосибирска
 #    - url: https://et-cetera.ru/mobile
 #      name: Театр "Et cetera"
-#    По-прежнему не работает обход больших сайтов
 #    - url: https://dimonvideo.ru
 #      name: Все для мобильных устройств
 

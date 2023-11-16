@@ -1,14 +1,14 @@
 package searchengine.controllers;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import searchengine.dto.indexing.ErrorMessage;
+import searchengine.dto.indexing.Response;
+import searchengine.dto.indexing.message.ErrorMessage;
 import searchengine.dto.indexing.ErrorResponse;
 import searchengine.dto.indexing.SuccessResponse;
 import searchengine.dto.statistics.StatisticsResponse;
@@ -19,9 +19,7 @@ import searchengine.services.StatisticsService;
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class ApiController {
-    @Autowired
     private final StatisticsService statisticsService;
-    @Autowired
     private final IndexingService indexingService;
 
     @GetMapping("/statistics")
@@ -30,15 +28,15 @@ public class ApiController {
     }
 
     @GetMapping("/startIndexing")
-    public ResponseEntity<?> startIndexing() {
-        if (indexingService.indexing()) {
+    public ResponseEntity<Response> startIndexing() {
+        if (indexingService.startIndexing()) {
             return ResponseEntity.ok( new SuccessResponse());
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ErrorMessage.START_INDEXING_ERROR));
     }
 
     @GetMapping("/stopIndexing")
-    public ResponseEntity<?> stopIndexing() {
+    public ResponseEntity<Response> stopIndexing() {
         if (indexingService.stopIndexing()) {
             return ResponseEntity.ok(new SuccessResponse());
         }
@@ -46,7 +44,7 @@ public class ApiController {
     }
 
     @PostMapping("/indexPage")
-    public ResponseEntity<?> indexPage(String url) {
+    public ResponseEntity<Response> indexPage(String url) {
         if (indexingService.indexPage(url)) {
             return ResponseEntity.ok(new SuccessResponse());
         }

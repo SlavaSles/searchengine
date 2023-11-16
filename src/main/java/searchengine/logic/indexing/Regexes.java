@@ -1,4 +1,4 @@
-package searchengine.logic.sitemapping;
+package searchengine.logic.indexing;
 
 public class Regexes {
     public static final String TDT = "%?\\w+([\\-_%\\w])*"; // Text - dash - text regex

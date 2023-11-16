@@ -1,4 +1,4 @@
-package searchengine.dto.indexing;
+package searchengine.dto.indexing.message;
 
 public class ErrorMessage {
 

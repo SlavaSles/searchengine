@@ -1,13 +1,12 @@
 package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import searchengine.config.SiteCfg;
 import searchengine.config.SitesList;
-import searchengine.logic.sitemapping.IndexingThread;
-import searchengine.logic.sitemapping.SiteMapper;
+import searchengine.logic.indexing.IndexingThread;
+import searchengine.logic.indexing.PageIndexer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,20 +15,18 @@ import java.util.concurrent.ForkJoinPool;
 @Service
 @RequiredArgsConstructor
 public class IndexingServiceImpl implements IndexingService {
-    @Autowired
     private final ApplicationContext context;
-    @Autowired
     private final SitesList sites;
-    private final List<IndexingThread> currentTasks = new ArrayList<>();
+    private final List<Thread> currentTasks = new ArrayList<>();
     private ForkJoinPool fjp;
 
-    public boolean indexing() {
+    public boolean startIndexing() {
         fjp = new ForkJoinPool();
         if (currentTasks.isEmpty()) {
-            SiteMapper.setIsInterrupted(false);
+            currentTasks.add(new Thread(System.out::println));
+            PageIndexer.setIsInterrupted(false);
             for(SiteCfg siteCfg : sites.getSites()) {
-                IndexingThread indexingThread = context.getBean(IndexingThread.class);
-                indexingThread.setSiteCfg(siteCfg);
+                IndexingThread indexingThread = getIndexingThread(siteCfg);
                 indexingThread.setFjp(fjp);
                 currentTasks.add(indexingThread);
                 indexingThread.start();
@@ -42,8 +39,8 @@ public class IndexingServiceImpl implements IndexingService {
 
     public boolean stopIndexing() {
         if (!currentTasks.isEmpty()) {
-            SiteMapper.setIsInterrupted(true);
-            for (IndexingThread task : currentTasks) {
+            PageIndexer.setIsInterrupted(true);
+            for (Thread task : currentTasks) {
                 task.interrupt();
             }
             fjp.shutdown();
@@ -56,11 +53,10 @@ public class IndexingServiceImpl implements IndexingService {
 
     public boolean indexPage(String url) {
         boolean correctUrl = false;
+        PageIndexer.setIsInterrupted(false);
         for(SiteCfg siteCfg : sites.getSites()) {
             if (url.startsWith(siteCfg.getUrl().concat("/"))) {
-                SiteMapper.setIsInterrupted(false);
-                IndexingThread indexingThread = context.getBean(IndexingThread.class);
-                indexingThread.setSiteCfg(siteCfg);
+                IndexingThread indexingThread = getIndexingThread(siteCfg);
                 indexingThread.setAddedUrl(url);
                 indexingThread.start();
                 correctUrl = true;
@@ -68,5 +64,11 @@ public class IndexingServiceImpl implements IndexingService {
             }
         }
         return correctUrl;
+    }
+
+    private IndexingThread getIndexingThread(SiteCfg siteCfg) {
+        IndexingThread indexingThread = context.getBean(IndexingThread.class);
+        indexingThread.setSiteCfg(siteCfg);
+        return indexingThread;
     }
 }
