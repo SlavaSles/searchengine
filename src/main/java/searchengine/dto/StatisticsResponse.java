@@ -1,7 +1,8 @@
-package searchengine.dto.statistics;
+package searchengine.dto;
 
 import lombok.Builder;
 import lombok.Data;
+import searchengine.dto.statistics.StatisticsData;
 
 @Builder
 @Data

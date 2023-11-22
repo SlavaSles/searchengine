@@ -1,7 +1,8 @@
-package searchengine.dto.indexing;
+package searchengine.dto;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import searchengine.dto.indexing.Response;
 
 @RequiredArgsConstructor
 @Getter

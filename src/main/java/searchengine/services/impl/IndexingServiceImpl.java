@@ -1,4 +1,4 @@
-package searchengine.services;
+package searchengine.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationContext;
@@ -7,6 +7,7 @@ import searchengine.config.SiteCfg;
 import searchengine.config.SitesList;
 import searchengine.logic.indexing.IndexingThread;
 import searchengine.logic.indexing.PageIndexer;
+import searchengine.services.IndexingService;
 
 import java.util.ArrayList;
 import java.util.List;

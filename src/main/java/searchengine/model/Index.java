@@ -23,6 +23,7 @@ public class Index {
     @JoinColumn(name = "lemma_id", columnDefinition = "INT NOT NULL")
     @ToString.Exclude
     private Lemma lemma;
+//    ToDo: Поменять тип на Integer
     @Column(name = "lemmas_rank", columnDefinition = "FLOAT NOT NULL")
     private float rank;
 

@@ -9,6 +9,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import searchengine.config.auxclass.Connection;
+import searchengine.logic.indexing.impl.LemmaSearcherImpl;
 import searchengine.model.Index;
 import searchengine.model.Lemma;
 import searchengine.model.Page;
@@ -22,8 +23,6 @@ import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static java.lang.Thread.sleep;
 
 public class PageIndexer extends RecursiveAction {
     private final String REGEX_SUBDOMAIN_URL_SEARCH;
@@ -129,7 +128,7 @@ public class PageIndexer extends RecursiveAction {
         int statusCode = 0;
         String content = "";
         try {
-            sleep(300);
+            Thread.sleep(300);
             LOGGER.info("Обращение по адресу: " + site.getDomain().concat(page.getPath()));
             doc = Jsoup.connect(site.getDomain().concat(page.getPath()))
                     .userAgent(selectAgent())

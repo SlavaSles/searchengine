@@ -1,14 +1,14 @@
-package searchengine.logic.indexing;
+package searchengine.logic.indexing.impl;
 
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.english.EnglishLuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
+import searchengine.logic.indexing.LemmaSearcher;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,8 +20,10 @@ public class LemmaSearcherImpl implements LemmaSearcher {
     }
 
     public HashMap<String, Integer> searchLemmas(String content) {
-        String cleanContent = cleanHtml(content);
-        String[] words = splitText(cleanContent);
+        if (content.contains("<html")) {
+            content = cleanHtml(content);
+        }
+        String[] words = splitText(content);
         LuceneMorphology ruLuceneMorphology;
         LuceneMorphology engLuceneMorphology;
         try {
@@ -52,6 +54,7 @@ public class LemmaSearcherImpl implements LemmaSearcher {
             }
             if (wordOpt.isPresent()) {
                 String lemma = wordOpt.get();
+                lemma = lemma.replaceAll("[ёЁ]", "е");
                 lemmasCounter.put(lemma, lemmasCounter.containsKey(lemma) ?
                         (lemmasCounter.get(lemma) + 1) : 1);
             }
@@ -83,5 +86,10 @@ public class LemmaSearcherImpl implements LemmaSearcher {
 
     private String cleanHtml(String content) {
         return Jsoup.clean(content, Safelist.none());
+    }
+
+    @Override
+    public Set<String> getLemmas(String query) {
+        return searchLemmas(query).keySet();
     }
 }

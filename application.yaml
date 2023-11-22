@@ -35,10 +35,10 @@ indexing-settings:
 #      name: Институт прикладной физики РАН
     - url: https://www.svetlovka.ru
       name: Молодежная библиотека им. Светлова
-    - url: https://www.lutherancathedral.ru
-      name: Лютеранский кафедральный собор
-    - url: https://поддерживаю.рф
-      name: поддерживаю.рф
+#    - url: https://www.lutherancathedral.ru
+#      name: Лютеранский кафедральный собор
+#    - url: https://поддерживаю.рф
+#      name: поддерживаю.рф
 #    - url: https://adsf.asd
 #      name: Несуществующий сайт
 #    - url: https://gorvodokanal.com
