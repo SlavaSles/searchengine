@@ -37,7 +37,6 @@ public class IndexingThread extends Thread {
     private ForkJoinPool fjp;
     @Setter
     private String addedUrl;
-    private PageIndexer pageIndexer;
     private final ConcurrentSkipListSet<Page> allPages = new ConcurrentSkipListSet<>(
             (Comparator.comparing(Page::getPath)));
     private final ConcurrentHashMap<String, Lemma> allLemmas = new ConcurrentHashMap<>();
@@ -88,8 +87,7 @@ public class IndexingThread extends Thread {
     private void indexSite(Site site) {
         Page firstPage = createNewPage(site, site.getSubDomain().concat("/"));
         allPages.add(firstPage);
-        pageIndexer = new PageIndexer(connection, firstPage, allPages, allLemmas, allIndices);
-        fjp.invoke(pageIndexer);
+        fjp.invoke(new PageIndexer(connection, firstPage, allPages, allLemmas, allIndices));
     }
 
     private void changeSiteStatus(Site site) {
@@ -189,8 +187,7 @@ public class IndexingThread extends Thread {
         if (addedPage.getId() != null) {
             changeLemmasAndIndicesForExistPage(addedPage);
         }
-        pageIndexer = new PageIndexer(connection, addedPage, allPages, allLemmas, allIndices);
-        pageIndexer.compute();
+        new PageIndexer(connection, addedPage, allPages, allLemmas, allIndices).compute();
         savePages();
         updateLemmas(site);
         saveIndices();

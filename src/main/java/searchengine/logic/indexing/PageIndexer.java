@@ -85,8 +85,7 @@ public class PageIndexer extends RecursiveAction {
     }
 
     private void getLemmasAndIndicesForPage() {
-        LemmaSearcher lemmaSearcher = new LemmaSearcherImpl();
-        HashMap<String, Integer> lemmasCounter = lemmaSearcher.searchLemmas(page.getContent());
+        HashMap<String, Integer> lemmasCounter = new LemmaSearcherImpl().searchLemmas(page.getContent());
         for (String pageLemma : lemmasCounter.keySet()) {
             if (lemmas.containsKey(pageLemma)) {
                 lemmas.get(pageLemma).setFrequency(lemmas.get(pageLemma).getFrequency() + 1);
