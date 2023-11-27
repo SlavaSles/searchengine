@@ -1,4 +1,4 @@
-package searchengine.logic.indexing;
+package searchengine.indexing;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

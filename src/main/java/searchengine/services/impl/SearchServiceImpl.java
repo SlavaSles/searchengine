@@ -8,8 +8,7 @@ import searchengine.config.SiteCfg;
 import searchengine.config.SitesList;
 import searchengine.dto.SearchResponse;
 import searchengine.dto.search.DetailedSearchItem;
-import searchengine.logic.indexing.LemmaSearcher;
-import searchengine.logic.indexing.impl.LemmaSearcherImpl;
+import searchengine.indexing.impl.LemmaSearcherImpl;
 import searchengine.model.*;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
@@ -40,28 +39,23 @@ public class SearchServiceImpl implements SearchService {
             if (searchingLemmas.size() != findingLemmas.size()) {
                 continue;
             }
-            findingLemmas.forEach((key, value) -> System.out.println(key + " - " + value));
 //            Исключение часто встречающихся лемм. В поисковой выдаче попадаются результаты без этих лемм.
+//            Если исключать леммы из поиска, то нужно также убирать их из Set-а, передаваемого в snippet.
 //            findingLemmas.entrySet().removeIf(entry -> entry.getValue() > 0.1f && findingLemmas.size() > 2);
             Map<Page, Float> pagesWithRelevance = findPagesWithRelevance(findingLemmas);
-            System.out.println("Количество найденных страниц: " + pagesWithRelevance.size());
-//        pagesWithRelevance.forEach((k, v) -> System.out.println(k.getId() + " - " + k.getPath() + " - " + k.getSite().getUrl() + " - " + v));
             if (!pagesWithRelevance.isEmpty()) {
                 findingPagesWithRelevanceForSites.add(pagesWithRelevance);
             }
         }
         if (findingPagesWithRelevanceForSites.isEmpty()) {
-            return createEmptyListResponse();
+            return createEmptySearchResponse();
         }
         Map<Page, Float> pagesWithRelevanceForAllSites = joinAllResultPages(findingPagesWithRelevanceForSites);
         calculateRelativelyRelevance(pagesWithRelevanceForAllSites);
         List<Map.Entry<Page, Float>> reducedPagesWithRelevance =
                 reduceAllPages(pagesWithRelevanceForAllSites, offset, limit);
-        List<DetailedSearchItem> searchItems = createSearchItems(reducedPagesWithRelevance);
-        return SearchResponse.builder()
-                .count(pagesWithRelevanceForAllSites.size())
-                .data(searchItems)
-                .build();
+        List<DetailedSearchItem> searchItems = createSearchItems(reducedPagesWithRelevance, searchingLemmas);
+        return createSearchResponse(pagesWithRelevanceForAllSites.size(), searchItems);
     }
 
     @Transactional
@@ -121,7 +115,7 @@ public class SearchServiceImpl implements SearchService {
         return reducedPagesWithRelevance;
     }
 
-    private SearchResponse createEmptyListResponse() {
+    private SearchResponse createEmptySearchResponse() {
         return SearchResponse.builder()
                 .count(0)
                 .data(new ArrayList<>())
@@ -148,14 +142,11 @@ public class SearchServiceImpl implements SearchService {
         List<Map.Entry<Page, Float>> sortedPagesWithRelevance = new ArrayList<>(pagesWithRelevanceForAllSites
                 .entrySet().stream().toList());
         sortedPagesWithRelevance.sort((e1, e2) -> -e1.getValue().compareTo(e2.getValue()));
-        List<Map.Entry<Page, Float>> reducedPagesWithRelevance = sortedPagesWithRelevance.stream()
-                .skip(offset).limit(limit).toList();
-        reducedPagesWithRelevance.forEach((entry) -> System.out.println(entry.getKey().getId() + " - "
-                + entry.getKey().getPath() + " - " + entry.getKey().getSite().getUrl() + " - " + entry.getValue()));
-    return reducedPagesWithRelevance;
+    return sortedPagesWithRelevance.stream().skip(offset).limit(limit).toList();
     }
 
-    private List<DetailedSearchItem> createSearchItems(List<Map.Entry<Page, Float>> reducedPagesWithRelevance) {
+    private List<DetailedSearchItem> createSearchItems(List<Map.Entry<Page, Float>> reducedPagesWithRelevance,
+                                                       Set<String> searchingLemmas) {
         List<DetailedSearchItem> searchItems = new ArrayList<>();
         for (Map.Entry<Page, Float> pageWithRelevance : reducedPagesWithRelevance) {
             DetailedSearchItem searchItem = DetailedSearchItem.builder()
@@ -163,7 +154,7 @@ public class SearchServiceImpl implements SearchService {
                     .siteName(pageWithRelevance.getKey().getSite().getName())
                     .uri(pageWithRelevance.getKey().getPath())
                     .title(Jsoup.parse(pageWithRelevance.getKey().getContent()).title())
-                    .snippet("getSnippet(pageWithRelevance.getKey().getContent(), searchingLemmas)")
+                    .snippet(getSnippet(pageWithRelevance.getKey().getContent(), searchingLemmas))
                     .relevance(pageWithRelevance.getValue())
                     .build();
             searchItems.add(searchItem);
@@ -172,7 +163,13 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private String getSnippet(String content, Set<String> searchingLemmas) {
-        LemmaSearcher lemmaSearcher = new LemmaSearcherImpl();
-        return lemmaSearcher.getSnippet(content, searchingLemmas);
+        return new LemmaSearcherImpl().getSnippet(content, searchingLemmas);
+    }
+
+    private SearchResponse createSearchResponse(Integer size, List<DetailedSearchItem> searchItems) {
+        return SearchResponse.builder()
+                .count(size)
+                .data(searchItems)
+                .build();
     }
 }

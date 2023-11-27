@@ -5,8 +5,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import searchengine.config.SiteCfg;
 import searchengine.config.SitesList;
-import searchengine.logic.indexing.IndexingThread;
-import searchengine.logic.indexing.PageIndexer;
+import searchengine.indexing.IndexingThread;
+import searchengine.indexing.PageIndexer;
 import searchengine.services.IndexingService;
 
 import java.util.ArrayList;

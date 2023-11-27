@@ -1,4 +1,4 @@
-package searchengine.logic.indexing;
+package searchengine.indexing;
 
 import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
@@ -9,7 +9,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import searchengine.config.auxclass.Connection;
-import searchengine.logic.indexing.impl.LemmaSearcherImpl;
+import searchengine.indexing.impl.LemmaSearcherImpl;
 import searchengine.model.Index;
 import searchengine.model.Lemma;
 import searchengine.model.Page;

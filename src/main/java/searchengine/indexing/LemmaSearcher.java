@@ -1,4 +1,4 @@
-package searchengine.logic.indexing;
+package searchengine.indexing;
 
 import java.util.HashMap;
 import java.util.Set;
