@@ -39,10 +39,11 @@ public class SearchServiceImpl implements SearchService {
             if (searchingLemmas.size() != findingLemmas.size()) {
                 continue;
             }
-//            Исключение часто встречающихся лемм. В поисковой выдаче попадаются результаты без этих лемм.
+//            Закомментировано исключение часто встречающихся лемм. В поисковой выдаче попадаются результаты без этих лемм.
 //            Если исключать леммы из поиска, то нужно также убирать их из Set-а, передаваемого в snippet.
 //            findingLemmas.entrySet().removeIf(entry -> entry.getValue() > 0.1f && findingLemmas.size() > 2);
-            Map<Page, Float> pagesWithRelevance = findPagesWithRelevance(findingLemmas);
+            List<Map.Entry<Lemma, Float>> sortedLemmasByFrequency = sortFindingLemmasByFrequency(findingLemmas);
+            Map<Page, Float> pagesWithRelevance = findPagesWithRelevance(sortedLemmasByFrequency);
             if (!pagesWithRelevance.isEmpty()) {
                 findingPagesWithRelevanceForSites.add(pagesWithRelevance);
             }
@@ -60,7 +61,7 @@ public class SearchServiceImpl implements SearchService {
 
     @Transactional
     public Map<Lemma, Float> findLemmasOnSite(SiteCfg siteCfg, Set<String> searchingLemmas) {
-        Map<Lemma, Float> findingLemmas = new TreeMap<>(Comparator.comparing(Lemma::getFrequency));
+        Map<Lemma, Float> findingLemmas = new HashMap<>();
         Optional<Site> searchingSiteOpt = siteRepository.findSiteByUrl(siteCfg.getUrl());
         if (searchingSiteOpt.isEmpty() || searchingSiteOpt.get().getStatus() != Status.INDEXED) {
 //                    ToDo: Сгенерировать ошибки по запросу
@@ -76,15 +77,22 @@ public class SearchServiceImpl implements SearchService {
         return findingLemmas;
     }
 
-    private Map<Page, Float> findPagesWithRelevance(Map<Lemma, Float> findingLemmas) {
+    private List<Map.Entry<Lemma, Float>> sortFindingLemmasByFrequency(Map<Lemma, Float> findingLemmas) {
+        List<Map.Entry<Lemma, Float>> sortedLemmasByFrequency =
+                new ArrayList<>(findingLemmas.entrySet().stream().toList());
+        sortedLemmasByFrequency.sort(Comparator.comparing(e -> e.getKey().getFrequency()));
+        return sortedLemmasByFrequency;
+    }
+
+    private Map<Page, Float> findPagesWithRelevance(List<Map.Entry<Lemma, Float>> sortedLemmasByFrequency) {
         Map<Page, Float> pagesWithRelevance = new HashMap<>();
         boolean firstLemma = true;
-        for (Lemma lemma : findingLemmas.keySet()) {
+        for (Map.Entry<Lemma, Float> entry : sortedLemmasByFrequency) {
             if (firstLemma) {
                 firstLemma = false;
-                findPagesWithFirstLemma(pagesWithRelevance, lemma);
+                findPagesWithFirstLemma(pagesWithRelevance, entry.getKey());
             } else {
-                pagesWithRelevance = findLemmaOnPages(pagesWithRelevance, lemma);
+                pagesWithRelevance = findLemmaOnPages(pagesWithRelevance, entry.getKey());
             }
             if (pagesWithRelevance.isEmpty()) {
                 return pagesWithRelevance;

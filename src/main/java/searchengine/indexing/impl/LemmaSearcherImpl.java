@@ -214,7 +214,7 @@ public class LemmaSearcherImpl implements LemmaSearcher {
 
     private List<String> getSnippetParts(List<Integer> snippetIndices, String[] words, String cleanContent) {
         List<String> snippetParts = new ArrayList<>();
-        int snippetLength = 50;
+        int snippetLength = 40;
         int counter = snippetIndices.size() - 1;
         int offset = snippetLength / (counter + 1) / 2;
         while (true) {
@@ -240,7 +240,7 @@ public class LemmaSearcherImpl implements LemmaSearcher {
     }
 
     private int findEndIndex(Integer snippetIndex, String[] words, int offset) {
-        int endIndex = Math.min(snippetIndex + offset, words.length - 1);
+        int endIndex = Math.min(snippetIndex + offset - 1, words.length - 1);
         while (words[endIndex].isEmpty() && (endIndex < words.length - 2)) {
             endIndex++;
         }
