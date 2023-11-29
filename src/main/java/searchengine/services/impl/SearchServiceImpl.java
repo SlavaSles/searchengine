@@ -26,16 +26,17 @@ public class SearchServiceImpl implements SearchService {
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
     private final SitesList sites;
+    private Set<String> searchingLemmas;
 
     @Override
     public SearchResponse search(String query, String site, Integer offset, Integer limit) {
-        Set<String> searchingLemmas =  new LemmaSearcherImpl().getLemmas(query);
+        searchingLemmas =  new LemmaSearcherImpl().getLemmas(query);
         List<Map<Page, Float>> findingPagesWithRelevanceForSites = new ArrayList<>();
         for (SiteCfg siteCfg : sites.getSites()) {
             if (!site.isEmpty() && !site.equals(siteCfg.getUrl())) {
                 continue;
             }
-            Map<Lemma, Float> findingLemmas = findLemmasOnSite(siteCfg, searchingLemmas);
+            Map<Lemma, Float> findingLemmas = findLemmasOnSite(siteCfg);
             if (searchingLemmas.size() != findingLemmas.size()) {
                 continue;
             }
@@ -55,12 +56,12 @@ public class SearchServiceImpl implements SearchService {
         calculateRelativelyRelevance(pagesWithRelevanceForAllSites);
         List<Map.Entry<Page, Float>> reducedPagesWithRelevance =
                 reduceAllPages(pagesWithRelevanceForAllSites, offset, limit);
-        List<DetailedSearchItem> searchItems = createSearchItems(reducedPagesWithRelevance, searchingLemmas);
+        List<DetailedSearchItem> searchItems = createSearchItems(reducedPagesWithRelevance);
         return createSearchResponse(pagesWithRelevanceForAllSites.size(), searchItems);
     }
 
     @Transactional
-    public Map<Lemma, Float> findLemmasOnSite(SiteCfg siteCfg, Set<String> searchingLemmas) {
+    public Map<Lemma, Float> findLemmasOnSite(SiteCfg siteCfg) {
         Map<Lemma, Float> findingLemmas = new HashMap<>();
         Optional<Site> searchingSiteOpt = siteRepository.findSiteByUrl(siteCfg.getUrl());
         if (searchingSiteOpt.isEmpty() || searchingSiteOpt.get().getStatus() != Status.INDEXED) {
@@ -153,8 +154,7 @@ public class SearchServiceImpl implements SearchService {
     return sortedPagesWithRelevance.stream().skip(offset).limit(limit).toList();
     }
 
-    private List<DetailedSearchItem> createSearchItems(List<Map.Entry<Page, Float>> reducedPagesWithRelevance,
-                                                       Set<String> searchingLemmas) {
+    private List<DetailedSearchItem> createSearchItems(List<Map.Entry<Page, Float>> reducedPagesWithRelevance) {
         List<DetailedSearchItem> searchItems = new ArrayList<>();
         for (Map.Entry<Page, Float> pageWithRelevance : reducedPagesWithRelevance) {
             DetailedSearchItem searchItem = DetailedSearchItem.builder()
@@ -162,7 +162,7 @@ public class SearchServiceImpl implements SearchService {
                     .siteName(pageWithRelevance.getKey().getSite().getName())
                     .uri(pageWithRelevance.getKey().getPath())
                     .title(Jsoup.parse(pageWithRelevance.getKey().getContent()).title())
-                    .snippet(getSnippet(pageWithRelevance.getKey().getContent(), searchingLemmas))
+                    .snippet(getSnippet(pageWithRelevance.getKey().getContent()))
                     .relevance(pageWithRelevance.getValue())
                     .build();
             searchItems.add(searchItem);
@@ -170,7 +170,7 @@ public class SearchServiceImpl implements SearchService {
         return searchItems;
     }
 
-    private String getSnippet(String content, Set<String> searchingLemmas) {
+    private String getSnippet(String content) {
         return new LemmaSearcherImpl().getSnippet(content, searchingLemmas);
     }
 
