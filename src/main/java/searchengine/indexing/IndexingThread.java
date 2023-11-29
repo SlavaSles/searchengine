@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.auxclass.Connection;
 import searchengine.config.SiteCfg;
+import searchengine.exceptions.LemmatizerNotFoundException;
 import searchengine.model.*;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
@@ -51,14 +52,22 @@ public class IndexingThread extends Thread {
         Site site = createNewSite();
         deleteIndexFromDbForExistSite(site);
         saveSite(site);
+        Status status = Status.INDEXING;
         if (!Thread.currentThread().isInterrupted()) {
-            indexSite(site);
+            try {
+                indexSite(site);
+                status = Status.INDEXED;
+            } catch (LemmatizerNotFoundException ex) {
+                Thread.currentThread().interrupt();
+                PageIndexer.setIsInterrupted(true);
+                status = Status.FAILED;
+            }
             removeUnmappedPages();
         }
         savePages();
         saveLemmas();
         saveIndices();
-        changeSiteStatus(site);
+        changeSiteStatus(site, status);
         saveSite(site);
     }
 
@@ -90,8 +99,11 @@ public class IndexingThread extends Thread {
         fjp.invoke(new PageIndexer(connection, firstPage, allPages, allLemmas, allIndices));
     }
 
-    private void changeSiteStatus(Site site) {
-        if (Thread.currentThread().isInterrupted()) {
+    private void changeSiteStatus(Site site, Status status) {
+        if (status == Status.FAILED) {
+            site.setStatus(Status.FAILED);
+            site.setLastError("Ошибка подключения библиотек лемматизатора");
+        } else if (Thread.currentThread().isInterrupted() && status == Status.INDEXING) {
             site.setStatus(Status.FAILED);
             site.setLastError("Операция прервана пользователем");
         } else {
@@ -187,11 +199,19 @@ public class IndexingThread extends Thread {
         if (addedPage.getId() != null) {
             changeLemmasAndIndicesForExistPage(addedPage);
         }
-        new PageIndexer(connection, addedPage, allPages, allLemmas, allIndices).compute();
-        savePages();
-        updateLemmas(site);
-        saveIndices();
-        changeSiteStatus(site);
+        Status status;
+        try {
+            new PageIndexer(connection, addedPage, allPages, allLemmas, allIndices).compute();
+            savePages();
+            updateLemmas(site);
+            saveIndices();
+            status = Status.INDEXED;
+        } catch (LemmatizerNotFoundException ex) {
+            Thread.currentThread().interrupt();
+            PageIndexer.setIsInterrupted(true);
+            status = Status.FAILED;
+        }
+        changeSiteStatus(site, status);
         saveSite(site);
     }
 

@@ -33,10 +33,10 @@ indexing-settings:
 #      name: Радио милицейская волна
 #    - url: https://ipfran.ru
 #      name: Институт прикладной физики РАН
-    - url: https://www.svetlovka.ru
-      name: Молодежная библиотека им. Светлова
-    - url: https://www.lutherancathedral.ru
-      name: Лютеранский кафедральный собор
+#    - url: https://www.svetlovka.ru
+#      name: Молодежная библиотека им. Светлова
+#    - url: https://www.lutherancathedral.ru
+#      name: Лютеранский кафедральный собор
     - url: https://поддерживаю.рф
       name: поддерживаю.рф
 #    - url: https://adsf.asd

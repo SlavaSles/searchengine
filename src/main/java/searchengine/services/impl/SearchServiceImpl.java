@@ -8,6 +8,9 @@ import searchengine.config.SiteCfg;
 import searchengine.config.SitesList;
 import searchengine.dto.SearchResponse;
 import searchengine.dto.search.DetailedSearchItem;
+import searchengine.exceptions.EmptySearchQueryException;
+import searchengine.exceptions.PageNotFoundException;
+import searchengine.exceptions.SiteNotIndexedException;
 import searchengine.indexing.impl.LemmaSearcherImpl;
 import searchengine.model.*;
 import searchengine.repository.IndexRepository;
@@ -27,9 +30,15 @@ public class SearchServiceImpl implements SearchService {
     private final IndexRepository indexRepository;
     private final SitesList sites;
     private Set<String> searchingLemmas;
+    private boolean sitesNotIndexed;
 
     @Override
     public SearchResponse search(String query, String site, Integer offset, Integer limit) {
+        if (query.isEmpty()) {
+//            add log
+            throw new EmptySearchQueryException();
+        }
+        sitesNotIndexed = true;
         searchingLemmas =  new LemmaSearcherImpl().getLemmas(query);
         List<Map<Page, Float>> findingPagesWithRelevanceForSites = new ArrayList<>();
         for (SiteCfg siteCfg : sites.getSites()) {
@@ -49,8 +58,13 @@ public class SearchServiceImpl implements SearchService {
                 findingPagesWithRelevanceForSites.add(pagesWithRelevance);
             }
         }
+        if (sitesNotIndexed) {
+//            add log
+            throw new SiteNotIndexedException();
+        }
         if (findingPagesWithRelevanceForSites.isEmpty()) {
-            return createEmptySearchResponse();
+//            add log
+            throw new PageNotFoundException();
         }
         Map<Page, Float> pagesWithRelevanceForAllSites = joinAllResultPages(findingPagesWithRelevanceForSites);
         calculateRelativelyRelevance(pagesWithRelevanceForAllSites);
@@ -65,9 +79,9 @@ public class SearchServiceImpl implements SearchService {
         Map<Lemma, Float> findingLemmas = new HashMap<>();
         Optional<Site> searchingSiteOpt = siteRepository.findSiteByUrl(siteCfg.getUrl());
         if (searchingSiteOpt.isEmpty() || searchingSiteOpt.get().getStatus() != Status.INDEXED) {
-//                    ToDo: Сгенерировать ошибки по запросу
             return findingLemmas;
         }
+        sitesNotIndexed = false;
         int countPages = pageRepository.countPages(searchingSiteOpt.get().getId());
         for (String lemmaStr : searchingLemmas) {
             Optional<Lemma> findingLemmaOpt = lemmaRepository
@@ -122,13 +136,6 @@ public class SearchServiceImpl implements SearchService {
                     .put(page, pagesWithRelevance.get(page) + index.getRank()));
         }
         return reducedPagesWithRelevance;
-    }
-
-    private SearchResponse createEmptySearchResponse() {
-        return SearchResponse.builder()
-                .count(0)
-                .data(new ArrayList<>())
-                .build();
     }
 
     private Map<Page, Float> joinAllResultPages(List<Map<Page, Float>> findingPagesWithRelevanceForSites) {

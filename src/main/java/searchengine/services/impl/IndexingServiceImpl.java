@@ -5,10 +5,15 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import searchengine.config.SiteCfg;
 import searchengine.config.SitesList;
+import searchengine.exceptions.PageIndexingException;
+import searchengine.exceptions.StartIndexingException;
+import searchengine.exceptions.StopIndexingException;
 import searchengine.indexing.IndexingThread;
 import searchengine.indexing.PageIndexer;
 import searchengine.services.IndexingService;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
@@ -21,9 +26,9 @@ public class IndexingServiceImpl implements IndexingService {
     private final List<Thread> currentTasks = new ArrayList<>();
     private ForkJoinPool fjp;
 
-    public boolean startIndexing() {
-        fjp = new ForkJoinPool();
+    public void startIndexing() {
         if (currentTasks.isEmpty()) {
+            fjp = new ForkJoinPool();
             currentTasks.add(new Thread(System.out::println));
             PageIndexer.setIsInterrupted(false);
             for(SiteCfg siteCfg : sites.getSites()) {
@@ -32,13 +37,15 @@ public class IndexingServiceImpl implements IndexingService {
                 currentTasks.add(indexingThread);
                 indexingThread.start();
             }
-            return true;
+        } else if (fjp.getActiveThreadCount() == 0) {
+            stopIndexing();
         } else {
-            return false;
+//            add log
+            throw new StartIndexingException();
         }
     }
 
-    public boolean stopIndexing() {
+    public void stopIndexing() {
         if (!currentTasks.isEmpty()) {
             PageIndexer.setIsInterrupted(true);
             for (Thread task : currentTasks) {
@@ -46,25 +53,29 @@ public class IndexingServiceImpl implements IndexingService {
             }
             fjp.shutdown();
             currentTasks.clear();
-            return true;
         } else {
-            return false;
+            //            add log
+            throw new StopIndexingException();
         }
     }
 
-    public boolean indexPage(String url) {
+    public void indexPage(String url) {
         boolean correctUrl = false;
+        String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8).substring(4);
         PageIndexer.setIsInterrupted(false);
         for(SiteCfg siteCfg : sites.getSites()) {
-            if (url.startsWith(siteCfg.getUrl().concat("/"))) {
+            if (decodedUrl.startsWith(siteCfg.getUrl().concat("/"))) {
                 IndexingThread indexingThread = getIndexingThread(siteCfg);
-                indexingThread.setAddedUrl(url);
+                indexingThread.setAddedUrl(decodedUrl);
                 indexingThread.start();
                 correctUrl = true;
                 break;
             }
         }
-        return correctUrl;
+        if (!correctUrl) {
+            //            add log
+            throw new PageIndexingException();
+        }
     }
 
     private IndexingThread getIndexingThread(SiteCfg siteCfg) {

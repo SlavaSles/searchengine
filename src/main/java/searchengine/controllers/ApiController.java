@@ -1,12 +1,8 @@
 package searchengine.controllers;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import searchengine.dto.indexing.Response;
-import searchengine.dto.message.ErrorMessage;
-import searchengine.dto.ErrorResponse;
+import searchengine.dto.SearchResponse;
 import searchengine.dto.SuccessResponse;
 import searchengine.dto.StatisticsResponse;
 import searchengine.services.IndexingService;
@@ -26,48 +22,33 @@ public class ApiController {
         return statisticsService.getStatistics();
     }
 
-//    ToDo: 1. Сделать обработчик ошибок вместо ResponseEntity
-//    ToDo: 2. Сделать валидацию значений параметров
+//    ToDo: 1. Сделать валидацию значений параметров
     @GetMapping("/startIndexing")
-    public ResponseEntity<Response> startIndexing() {
-        if (indexingService.startIndexing()) {
-            return ResponseEntity.ok( new SuccessResponse());
-        }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(ErrorMessage.START_INDEXING_ERROR));
+    public SuccessResponse startIndexing() {
+        indexingService.startIndexing();
+        return new SuccessResponse();
     }
 
     @GetMapping("/stopIndexing")
-    public ResponseEntity<Response> stopIndexing() {
-        if (indexingService.stopIndexing()) {
-            return ResponseEntity.ok(new SuccessResponse());
-        }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(ErrorMessage.STOP_INDEXING_ERROR));
+    public SuccessResponse stopIndexing() {
+        indexingService.stopIndexing();
+        return new SuccessResponse();
     }
 
     @PostMapping("/indexPage")
-    public ResponseEntity<Response> indexPage(@RequestBody String url) {
-        if (indexingService.indexPage(url)) {
-            return ResponseEntity.ok(new SuccessResponse());
-        }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(ErrorMessage.PAGE_INDEXING_ERROR));
+    public SuccessResponse indexPage(@RequestBody String url) {
+        indexingService.indexPage(url);
+        return new SuccessResponse();
     }
 
     @GetMapping("/search")
-    public ResponseEntity<?> search(
+    public SearchResponse search(
             @RequestParam("query") String query,
             @RequestParam(value = "site", required = false) String site,
             @RequestParam(value = "offset", required = false, defaultValue = "0") Integer offset,
             @RequestParam(value = "limit", required = false, defaultValue = "20") Integer limit
-    ) {
-//        System.out.println("query: " + query + "\nsite: " + site + "\noffset: " + offset + "\nlimit: " + limit);
-        if (site == null) {
-            site = "";
-        }
-        return ResponseEntity.ok( searchService.search(query, site, offset, limit));
-//        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-//                .body(new ErrorResponse(ErrorMessage.PAGE_NOT_FOUND));
+    )
+    {
+        return searchService.search(query, (site == null) ? "" : site, offset, limit);
     }
 }

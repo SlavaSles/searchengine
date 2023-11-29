@@ -16,6 +16,8 @@ import searchengine.model.Page;
 import searchengine.model.Site;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -191,6 +193,10 @@ public class PageIndexer extends RecursiveAction {
 
     private String matchUrls(Element link) {
         String textLink = link.attr("href");
+//        ToDo: Подумать насчет преобразования URL-ов
+//        if (textLink.contains("%")) {
+//            textLink = URLDecoder.decode(textLink, StandardCharsets.UTF_8).substring(4);
+//        }
         String urlLink = "";
         List<String> regexes = Arrays.asList(REGEX_SUBDOMAIN_URL_SEARCH, REGEX_SUBDOMAIN_URL_HTML_SEARCH,
                 REGEX_SUBDOMAIN_URL_PHP_SEARCH, REGEX_SUBDOMAIN_URL_RU_SEARCH);

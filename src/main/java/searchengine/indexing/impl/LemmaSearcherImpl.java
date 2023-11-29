@@ -5,6 +5,7 @@ import org.apache.lucene.morphology.english.EnglishLuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
+import searchengine.exceptions.LemmatizerNotFoundException;
 import searchengine.indexing.LemmaSearcher;
 
 import java.io.IOException;
@@ -25,9 +26,6 @@ public class LemmaSearcherImpl implements LemmaSearcher {
         }
         String[] words = splitText(content);
         LuceneMorphology[] luceneMorphologies = getLuceneMorphologies();
-        if (luceneMorphologies.length == 0) {
-            return lemmasCounter;
-        }
         for (String word : words) {
             if (word.isEmpty()) {
                 continue;
@@ -45,8 +43,8 @@ public class LemmaSearcherImpl implements LemmaSearcher {
             engLuceneMorphology = new EnglishLuceneMorphology();
         } catch (IOException e) {
             e.printStackTrace();
-            return new LuceneMorphology[] {};
-//            throw new IOException("IOException возник во время получения доступа к словарям LuceneMorphology.");
+//            add log
+            throw new LemmatizerNotFoundException();
         }
         return new LuceneMorphology[] {engLuceneMorphology, ruLuceneMorphology};
     }
@@ -109,10 +107,6 @@ public class LemmaSearcherImpl implements LemmaSearcher {
         String cleanContent = cleanHtml(content);
         String[] words = splitText(cleanContent);
         LuceneMorphology[] luceneMorphologies = getLuceneMorphologies();
-        if (luceneMorphologies.length == 0) {
-//            ToDo: Доработать
-            return "";
-        }
         Map<String, List<Integer>> wordsAndIndices = findWordsAndIndices(words, luceneMorphologies, searchingLemmas);
         String rareLemma = findRareLemma(wordsAndIndices);
         List<Integer> snippetIndices = findClosestLemmaIndices(rareLemma, wordsAndIndices);
