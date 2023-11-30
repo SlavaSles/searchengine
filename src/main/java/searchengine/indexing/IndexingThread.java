@@ -2,6 +2,7 @@ package searchengine.indexing;
 
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -9,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.auxclass.Connection;
 import searchengine.config.SiteCfg;
 import searchengine.exceptions.LemmatizerNotFoundException;
+import searchengine.exceptions.errorMessage.ErrorMessage;
 import searchengine.model.*;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
@@ -23,6 +25,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Component
 @Scope(BeanDefinition.SCOPE_PROTOTYPE)
 @RequiredArgsConstructor
@@ -49,12 +52,15 @@ public class IndexingThread extends Thread {
             addIndexingPage(addedUrl);
             return;
         }
+        log.info("Запуск индексации сайта: {} - {}", siteCfg.getName(), siteCfg.getUrl());
         Site site = createNewSite();
+        log.info("Удаление из базы старых данных по сайту: {}", siteCfg.getUrl());
         deleteIndexFromDbForExistSite(site);
         saveSite(site);
         Status status = Status.INDEXING;
         if (!Thread.currentThread().isInterrupted()) {
             try {
+                log.info("Выполнение индексации сайта: {}", siteCfg.getUrl());
                 indexSite(site);
                 status = Status.INDEXED;
             } catch (LemmatizerNotFoundException ex) {
@@ -64,6 +70,7 @@ public class IndexingThread extends Thread {
             }
             removeUnmappedPages();
         }
+        log.info("Сохранение в базе данных найденной информации для сайта: {}", siteCfg.getUrl());
         savePages();
         saveLemmas();
         saveIndices();
@@ -102,10 +109,10 @@ public class IndexingThread extends Thread {
     private void changeSiteStatus(Site site, Status status) {
         if (status == Status.FAILED) {
             site.setStatus(Status.FAILED);
-            site.setLastError("Ошибка подключения библиотек лемматизатора");
+            site.setLastError(ErrorMessage.LEMMATIZER_NOT_FOUND);
         } else if (Thread.currentThread().isInterrupted() && status == Status.INDEXING) {
             site.setStatus(Status.FAILED);
-            site.setLastError("Операция прервана пользователем");
+            site.setLastError(ErrorMessage.INDEXING_CANCELLED);
         } else {
             site.setStatus(Status.INDEXED);
             site.setLastError(null);
@@ -197,10 +204,12 @@ public class IndexingThread extends Thread {
         saveSite(site);
         Page addedPage = findPageByPathAndSiteId(site, addedPath);
         if (addedPage.getId() != null) {
+            log.info("Удаление из базы старых данных по странице: {}", addedUrl);
             changeLemmasAndIndicesForExistPage(addedPage);
         }
         Status status;
         try {
+            log.info("Выполнение индексации страницы: {}", addedUrl);
             new PageIndexer(connection, addedPage, allPages, allLemmas, allIndices).compute();
             savePages();
             updateLemmas(site);
@@ -211,6 +220,7 @@ public class IndexingThread extends Thread {
             PageIndexer.setIsInterrupted(true);
             status = Status.FAILED;
         }
+        log.info("Сохранение в базе данных найденной информации для страницы: {}", addedUrl);
         changeSiteStatus(site, status);
         saveSite(site);
     }

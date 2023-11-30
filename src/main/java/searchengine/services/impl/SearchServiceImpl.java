@@ -1,6 +1,7 @@
 package searchengine.services.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,6 +12,7 @@ import searchengine.dto.search.DetailedSearchItem;
 import searchengine.exceptions.EmptySearchQueryException;
 import searchengine.exceptions.PageNotFoundException;
 import searchengine.exceptions.SiteNotIndexedException;
+import searchengine.exceptions.errorMessage.ErrorMessage;
 import searchengine.indexing.impl.LemmaSearcherImpl;
 import searchengine.model.*;
 import searchengine.repository.IndexRepository;
@@ -21,6 +23,7 @@ import searchengine.services.SearchService;
 
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SearchServiceImpl implements SearchService {
@@ -35,9 +38,10 @@ public class SearchServiceImpl implements SearchService {
     @Override
     public SearchResponse search(String query, String site, Integer offset, Integer limit) {
         if (query.isEmpty()) {
-//            add log
+            log.info(ErrorMessage.EMPTY_SEARCH_QUERY);
             throw new EmptySearchQueryException();
         }
+        log.info("Выполняется поиск страниц сайтов по запросу: {}", query);
         sitesNotIndexed = true;
         searchingLemmas =  new LemmaSearcherImpl().getLemmas(query);
         List<Map<Page, Float>> findingPagesWithRelevanceForSites = new ArrayList<>();
@@ -49,8 +53,10 @@ public class SearchServiceImpl implements SearchService {
             if (searchingLemmas.size() != findingLemmas.size()) {
                 continue;
             }
-//            Закомментировано исключение часто встречающихся лемм. В поисковой выдаче попадаются результаты без этих лемм.
-//            Если исключать леммы из поиска, то нужно также убирать их из Set-а, передаваемого в snippet.
+/*
+ *  Закомментировано исключение часто встречающихся лемм. В поисковой выдаче попадаются результаты без этих лемм.
+ *  Если исключать леммы из поиска, то нужно также убирать их из Set-а, передаваемого в snippet.
+ */
 //            findingLemmas.entrySet().removeIf(entry -> entry.getValue() > 0.1f && findingLemmas.size() > 2);
             List<Map.Entry<Lemma, Float>> sortedLemmasByFrequency = sortFindingLemmasByFrequency(findingLemmas);
             Map<Page, Float> pagesWithRelevance = findPagesWithRelevance(sortedLemmasByFrequency);
@@ -59,14 +65,15 @@ public class SearchServiceImpl implements SearchService {
             }
         }
         if (sitesNotIndexed) {
-//            add log
+            log.info(ErrorMessage.SITE_NOT_INDEXED);
             throw new SiteNotIndexedException();
         }
         if (findingPagesWithRelevanceForSites.isEmpty()) {
-//            add log
+            log.info(ErrorMessage.PAGE_NOT_FOUND);
             throw new PageNotFoundException();
         }
         Map<Page, Float> pagesWithRelevanceForAllSites = joinAllResultPages(findingPagesWithRelevanceForSites);
+        log.info("По запросу найдено {} страниц", pagesWithRelevanceForAllSites.size());
         calculateRelativelyRelevance(pagesWithRelevanceForAllSites);
         List<Map.Entry<Page, Float>> reducedPagesWithRelevance =
                 reduceAllPages(pagesWithRelevanceForAllSites, offset, limit);

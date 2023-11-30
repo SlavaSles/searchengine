@@ -1,11 +1,13 @@
 package searchengine.indexing.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.english.EnglishLuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
 import searchengine.exceptions.LemmatizerNotFoundException;
+import searchengine.exceptions.errorMessage.ErrorMessage;
 import searchengine.indexing.LemmaSearcher;
 
 import java.io.IOException;
@@ -13,6 +15,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 public class LemmaSearcherImpl implements LemmaSearcher {
     private final HashMap<String, Integer> lemmasCounter = new HashMap<>();
     private final String[] REGEXES = new String[] {"[A-Za-z]", "[А-ЯЁа-яё]"};
@@ -41,9 +44,8 @@ public class LemmaSearcherImpl implements LemmaSearcher {
         try {
             ruLuceneMorphology = new RussianLuceneMorphology();
             engLuceneMorphology = new EnglishLuceneMorphology();
-        } catch (IOException e) {
-            e.printStackTrace();
-//            add log
+        } catch (IOException ex) {
+            log.error(ErrorMessage.LEMMATIZER_NOT_FOUND, ex);
             throw new LemmatizerNotFoundException();
         }
         return new LuceneMorphology[] {engLuceneMorphology, ruLuceneMorphology};

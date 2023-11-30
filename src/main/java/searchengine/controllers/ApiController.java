@@ -22,7 +22,6 @@ public class ApiController {
         return statisticsService.getStatistics();
     }
 
-//    ToDo: 1. Сделать валидацию значений параметров
     @GetMapping("/startIndexing")
     public SuccessResponse startIndexing() {
         indexingService.startIndexing();

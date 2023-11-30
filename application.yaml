@@ -1,7 +1,6 @@
 server:
   port: 8080
 
-
 spring:
   datasource:
     username: admin
@@ -20,6 +19,13 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+logging:
+  level:
+    root: info
+    org.springframework: info
+    org.hibernate: info
+    searchengine: debug
 
 indexing-settings:
   sites:

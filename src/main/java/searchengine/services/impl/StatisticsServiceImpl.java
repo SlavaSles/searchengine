@@ -1,6 +1,7 @@
 package searchengine.services.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import searchengine.config.SiteCfg;
 import searchengine.config.SitesList;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StatisticsServiceImpl implements StatisticsService {
@@ -29,6 +31,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse getStatistics() {
+        log.info("Выполнен запрос статистики по проиндексированным сайтам");
         TotalStatistics total = TotalStatistics.builder()
                 .sites(0)
                 .pages(0)

@@ -1,9 +1,7 @@
 package searchengine.indexing;
 
 import lombok.Setter;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.jsoup.HttpStatusException;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -26,6 +24,7 @@ import java.util.concurrent.RecursiveAction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 public class PageIndexer extends RecursiveAction {
     private final String REGEX_SUBDOMAIN_URL_SEARCH;
     private final String REGEX_SUBDOMAIN_URL_RU_SEARCH;
@@ -39,7 +38,6 @@ public class PageIndexer extends RecursiveAction {
     private final Set<Index> indices;
     @Setter
     private static volatile Boolean isInterrupted;
-    private static final Logger LOGGER = LogManager.getLogger(PageIndexer.class);
 
     public PageIndexer(Connection connection, Page page, ConcurrentSkipListSet<Page> pages,
                        ConcurrentHashMap<String, Lemma> lemmas, Set<Index> indices) {
@@ -130,7 +128,7 @@ public class PageIndexer extends RecursiveAction {
         String content = "";
         try {
             Thread.sleep(300);
-            LOGGER.info("Обращение по адресу: " + site.getDomain().concat(page.getPath()));
+            log.debug("Обращение по адресу: {}", site.getDomain().concat(page.getPath()));
             doc = Jsoup.connect(site.getDomain().concat(page.getPath()))
                     .userAgent(selectAgent())
                     .referrer(connection.getReferrer())
@@ -139,12 +137,11 @@ public class PageIndexer extends RecursiveAction {
                     .get();
             content = doc.outerHtml();
             statusCode = doc.connection().response().statusCode();
-        } catch (HttpStatusException e) {
-            statusCode = getStatus(e.getMessage());
-        } catch (IOException e) {
-            statusCode = getStatus(e.getMessage());
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            log.error("Ошибка при работе Jsoup", ex);
+            statusCode = getStatus(ex.getMessage());
+        } catch (InterruptedException ex) {
+            log.error("Ошибка при работе Jsoup", ex);
         }
         page.setCode(statusCode);
         page.setContent(content);
@@ -193,10 +190,13 @@ public class PageIndexer extends RecursiveAction {
 
     private String matchUrls(Element link) {
         String textLink = link.attr("href");
-//        ToDo: Подумать насчет преобразования URL-ов
-//        if (textLink.contains("%")) {
-//            textLink = URLDecoder.decode(textLink, StandardCharsets.UTF_8).substring(4);
-//        }
+        if (textLink.contains("%")) {
+            try {
+                textLink = URLDecoder.decode(textLink, StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException ex) {
+                log.error("Ошибка декодирования URL-ссылки", ex);
+            }
+        }
         String urlLink = "";
         List<String> regexes = Arrays.asList(REGEX_SUBDOMAIN_URL_SEARCH, REGEX_SUBDOMAIN_URL_HTML_SEARCH,
                 REGEX_SUBDOMAIN_URL_PHP_SEARCH, REGEX_SUBDOMAIN_URL_RU_SEARCH);
