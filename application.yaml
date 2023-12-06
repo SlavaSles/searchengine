@@ -1,7 +1,6 @@
 server:
   port: 8080
 
-
 spring:
   datasource:
     username: admin
@@ -21,12 +20,15 @@ spring:
       ddl-auto: update
     show-sql: true
 
+logging:
+  level:
+    root: info
+    org.springframework: info
+    org.hibernate: info
+    searchengine: debug
+
 indexing-settings:
   sites:
-#    - url: https://www.lenta.ru
-#      name: Лента.ру
-#    - url: https://www.skillbox.ru
-#      name: Skillbox
 #    - url: https://www.playback.ru
 #      name: PlayBack.Ru
 #    - url: https://radiomv.ru
@@ -45,8 +47,8 @@ indexing-settings:
 #      name: Горводоканал г. Новосибирска
 #    - url: https://et-cetera.ru/mobile
 #      name: Театр "Et cetera"
-#    - url: https://dimonvideo.ru
-#      name: Все для мобильных устройств
+#    - url: https://www.berkeleygroup.co.uk
+#      name: Berkeley Group Development
 
 connection-settings:
   user-agents:

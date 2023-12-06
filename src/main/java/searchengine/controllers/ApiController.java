@@ -1,53 +1,69 @@
 package searchengine.controllers;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import searchengine.dto.indexing.Response;
-import searchengine.dto.indexing.message.ErrorMessage;
-import searchengine.dto.indexing.ErrorResponse;
-import searchengine.dto.indexing.SuccessResponse;
-import searchengine.dto.statistics.StatisticsResponse;
+import org.springframework.web.bind.annotation.*;
+import searchengine.dto.SearchResponse;
+import searchengine.dto.SuccessResponse;
+import searchengine.dto.StatisticsResponse;
 import searchengine.services.IndexingService;
+import searchengine.services.SearchService;
 import searchengine.services.StatisticsService;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@Tag(name = "Searching engine API controller", description = "Allows indexing sites, a certain page of a site, " +
+        "stop indexing, get statistics about indexed sites, perform a search on indexed sites")
 public class ApiController {
     private final StatisticsService statisticsService;
     private final IndexingService indexingService;
+    private final SearchService searchService;
 
+    @Operation(summary = "Getting site statistics")
     @GetMapping("/statistics")
-    public ResponseEntity<StatisticsResponse> statistics() {
-        return ResponseEntity.ok(statisticsService.getStatistics());
+    public StatisticsResponse statistics() {
+        return statisticsService.getStatistics();
     }
 
+    @Operation(summary = "Starting site indexing")
     @GetMapping("/startIndexing")
-    public ResponseEntity<Response> startIndexing() {
-        if (indexingService.startIndexing()) {
-            return ResponseEntity.ok( new SuccessResponse());
-        }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ErrorMessage.START_INDEXING_ERROR));
+    public SuccessResponse startIndexing() {
+        indexingService.startIndexing();
+        return new SuccessResponse();
     }
 
+    @Operation(summary = "Stopping site indexing")
     @GetMapping("/stopIndexing")
-    public ResponseEntity<Response> stopIndexing() {
-        if (indexingService.stopIndexing()) {
-            return ResponseEntity.ok(new SuccessResponse());
-        }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ErrorMessage.STOP_INDEXING_ERROR));
+    public SuccessResponse stopIndexing() {
+        indexingService.stopIndexing();
+        return new SuccessResponse();
     }
 
+    @Operation(summary = "Certain page indexing")
     @PostMapping("/indexPage")
-    public ResponseEntity<Response> indexPage(String url) {
-        if (indexingService.indexPage(url)) {
-            return ResponseEntity.ok(new SuccessResponse());
-        }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ErrorMessage.PAGE_INDEXING_ERROR));
+    public SuccessResponse indexPage(@RequestBody
+                                         @Parameter(description = "URL of certain page for indexing")
+                                         String url) {
+        indexingService.indexPage(url);
+        return new SuccessResponse();
+    }
+
+    @Operation(summary = "Searching on indexed sites")
+    @GetMapping("/search")
+    public SearchResponse search(
+            @RequestParam(value = "query")
+                @Parameter(description = "Search query", required = true) String query,
+            @RequestParam(value = "site", required = false, defaultValue = "")
+                @Parameter(description = "Site for searching") String site,
+            @RequestParam(value = "offset", required = false, defaultValue = "0")
+                @Parameter(description = "Offset for paging") Integer offset,
+            @RequestParam(value = "limit", required = false, defaultValue = "20")
+                @Parameter(description = "Limit of searching items") Integer limit
+    )
+    {
+        return searchService.search(query, site, offset, limit);
     }
 }

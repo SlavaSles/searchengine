@@ -1,20 +1,21 @@
-package searchengine.logic.indexing;
+package searchengine.indexing;
 
 import lombok.Setter;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.jsoup.HttpStatusException;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import searchengine.config.auxclass.Connection;
+import searchengine.indexing.impl.LemmaSearcherImpl;
 import searchengine.model.Index;
 import searchengine.model.Lemma;
 import searchengine.model.Page;
 import searchengine.model.Site;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -23,8 +24,7 @@ import java.util.concurrent.RecursiveAction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.Thread.sleep;
-
+@Slf4j
 public class PageIndexer extends RecursiveAction {
     private final String REGEX_SUBDOMAIN_URL_SEARCH;
     private final String REGEX_SUBDOMAIN_URL_RU_SEARCH;
@@ -38,7 +38,6 @@ public class PageIndexer extends RecursiveAction {
     private final Set<Index> indices;
     @Setter
     private static volatile Boolean isInterrupted;
-    private static final Logger LOGGER = LogManager.getLogger(PageIndexer.class);
 
     public PageIndexer(Connection connection, Page page, ConcurrentSkipListSet<Page> pages,
                        ConcurrentHashMap<String, Lemma> lemmas, Set<Index> indices) {
@@ -86,8 +85,7 @@ public class PageIndexer extends RecursiveAction {
     }
 
     private void getLemmasAndIndicesForPage() {
-        LemmaSearcher lemmaSearcher = new LemmaSearcherImpl();
-        HashMap<String, Integer> lemmasCounter = lemmaSearcher.searchLemmas(page.getContent());
+        HashMap<String, Integer> lemmasCounter = new LemmaSearcherImpl().searchLemmas(page.getContent());
         for (String pageLemma : lemmasCounter.keySet()) {
             if (lemmas.containsKey(pageLemma)) {
                 lemmas.get(pageLemma).setFrequency(lemmas.get(pageLemma).getFrequency() + 1);
@@ -129,8 +127,9 @@ public class PageIndexer extends RecursiveAction {
         int statusCode = 0;
         String content = "";
         try {
-            sleep(300);
-            LOGGER.info("Обращение по адресу: " + site.getDomain().concat(page.getPath()));
+            Thread.sleep(450);
+            log.debug("Обращение по адресу: {}", site.getDomain().concat(page.getPath()));
+//            log.debug("Количество най страниц на сайте {} равно: {}", site.getName(), pages.size());
             doc = Jsoup.connect(site.getDomain().concat(page.getPath()))
                     .userAgent(selectAgent())
                     .referrer(connection.getReferrer())
@@ -139,12 +138,11 @@ public class PageIndexer extends RecursiveAction {
                     .get();
             content = doc.outerHtml();
             statusCode = doc.connection().response().statusCode();
-        } catch (HttpStatusException e) {
-            statusCode = getStatus(e.getMessage());
-        } catch (IOException e) {
-            statusCode = getStatus(e.getMessage());
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            log.error("Ошибка при работе Jsoup", ex);
+            statusCode = getStatus(ex.getMessage());
+        } catch (InterruptedException ex) {
+            log.error("Ошибка при работе Jsoup", ex);
         }
         page.setCode(statusCode);
         page.setContent(content);
@@ -193,6 +191,13 @@ public class PageIndexer extends RecursiveAction {
 
     private String matchUrls(Element link) {
         String textLink = link.attr("href");
+        if (textLink.contains("%")) {
+            try {
+                textLink = URLDecoder.decode(textLink, StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException ex) {
+                log.error("Ошибка декодирования URL-ссылки", ex);
+            }
+        }
         String urlLink = "";
         List<String> regexes = Arrays.asList(REGEX_SUBDOMAIN_URL_SEARCH, REGEX_SUBDOMAIN_URL_HTML_SEARCH,
                 REGEX_SUBDOMAIN_URL_PHP_SEARCH, REGEX_SUBDOMAIN_URL_RU_SEARCH);
