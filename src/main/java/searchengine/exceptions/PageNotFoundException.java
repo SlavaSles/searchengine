@@ -6,6 +6,6 @@ import java.util.NoSuchElementException;
 
 public class PageNotFoundException extends NoSuchElementException {
     public PageNotFoundException() {
-        super(ErrorMessage.PAGE_NOT_FOUND);
+        super(ErrorMessage.PAGE_NOT_FOUND.getMessage());
     }
 }

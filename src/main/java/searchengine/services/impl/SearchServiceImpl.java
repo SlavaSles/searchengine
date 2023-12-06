@@ -38,7 +38,7 @@ public class SearchServiceImpl implements SearchService {
     @Override
     public SearchResponse search(String query, String site, Integer offset, Integer limit) {
         if (query.isEmpty()) {
-            log.info(ErrorMessage.EMPTY_SEARCH_QUERY);
+            log.info(ErrorMessage.EMPTY_SEARCH_QUERY.getMessage());
             throw new EmptySearchQueryException();
         }
         log.info("Выполняется поиск страниц сайтов по запросу: {}", query);
@@ -65,11 +65,11 @@ public class SearchServiceImpl implements SearchService {
             }
         }
         if (sitesNotIndexed) {
-            log.info(ErrorMessage.SITE_NOT_INDEXED);
+            log.info(ErrorMessage.SITE_NOT_INDEXED.getMessage());
             throw new SiteNotIndexedException();
         }
         if (findingPagesWithRelevanceForSites.isEmpty()) {
-            log.info(ErrorMessage.PAGE_NOT_FOUND);
+            log.info(ErrorMessage.PAGE_NOT_FOUND.getMessage());
             throw new PageNotFoundException();
         }
         Map<Page, Float> pagesWithRelevanceForAllSites = joinAllResultPages(findingPagesWithRelevanceForSites);

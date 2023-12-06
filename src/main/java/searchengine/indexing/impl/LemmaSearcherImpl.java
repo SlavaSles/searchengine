@@ -45,7 +45,7 @@ public class LemmaSearcherImpl implements LemmaSearcher {
             ruLuceneMorphology = new RussianLuceneMorphology();
             engLuceneMorphology = new EnglishLuceneMorphology();
         } catch (IOException ex) {
-            log.error(ErrorMessage.LEMMATIZER_NOT_FOUND, ex);
+            log.error(ErrorMessage.LEMMATIZER_NOT_FOUND.getMessage(), ex);
             throw new LemmatizerNotFoundException();
         }
         return new LuceneMorphology[] {engLuceneMorphology, ruLuceneMorphology};

@@ -22,22 +22,32 @@
             <totalSizeCap>${LOGBACK_ROLLINGPOLICY_TOTAL_SIZE_CAP:-0}</totalSizeCap>
             <maxHistory>${LOGBACK_ROLLINGPOLICY_MAX_HISTORY:-7}</maxHistory>
         </rollingPolicy>
+<!--        Фильтры сообщениий-->
+<!--        <filter class="ch.qos.logback.classic.filter.LevelFilter">-->
+<!--            <level>DEBUG</level>-->
+<!--            <onMatch>ACCEPT</onMatch>-->
+<!--            <onMismatch>DENY</onMismatch>-->
+<!--        </filter>-->
+<!--        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">-->
+<!--            <level>DEBUG</level>-->
+<!--        </filter>-->
     </appender>
 
     <root level="info">
         <appender-ref ref="CONSOLE"/>
-    </root>
-
-    <logger name="searchengine" level="debug">
         <appender-ref ref="rolling_file"/>
-    </logger>
+    </root>
+<!--    Дополнительные логгеры-->
+<!--    <logger name="searchengine.indexing.PageIndexer" level="debug">-->
+<!--        <appender-ref ref="rolling_file"/>-->
+<!--    </logger>-->
 
-    <!--    <logger name="org.springframework" level="warn">-->
-    <!--        <appender-ref ref="rolling_file"/>-->
-    <!--    </logger>-->
+<!--    <logger name="org.springframework" level="warn">-->
+<!--        <appender-ref ref="rolling_file"/>-->
+<!--    </logger>-->
 
-    <!--    <logger name="org.hibernate" level="warn">-->
-    <!--        <appender-ref ref="rolling_file"/>-->
-    <!--    </logger>-->
+<!--    <logger name="org.hibernate" level="warn">-->
+<!--        <appender-ref ref="rolling_file"/>-->
+<!--    </logger>-->
 
 </configuration>

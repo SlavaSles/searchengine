@@ -109,10 +109,10 @@ public class IndexingThread extends Thread {
     private void changeSiteStatus(Site site, Status status) {
         if (status == Status.FAILED) {
             site.setStatus(Status.FAILED);
-            site.setLastError(ErrorMessage.LEMMATIZER_NOT_FOUND);
+            site.setLastError(ErrorMessage.LEMMATIZER_NOT_FOUND.getMessage());
         } else if (Thread.currentThread().isInterrupted() && status == Status.INDEXING) {
             site.setStatus(Status.FAILED);
-            site.setLastError(ErrorMessage.INDEXING_CANCELLED);
+            site.setLastError(ErrorMessage.INDEXING_CANCELLED.getMessage());
         } else {
             site.setStatus(Status.INDEXED);
             site.setLastError(null);

@@ -44,7 +44,7 @@ public class IndexingServiceImpl implements IndexingService {
         } else if (fjp.getActiveThreadCount() == 0) {
             stopIndexing();
         } else {
-            log.info(ErrorMessage.START_INDEXING_ERROR);
+            log.info(ErrorMessage.START_INDEXING_ERROR.getMessage());
             throw new StartIndexingException();
         }
     }
@@ -59,7 +59,7 @@ public class IndexingServiceImpl implements IndexingService {
             fjp.shutdown();
             currentTasks.clear();
         } else {
-            log.info(ErrorMessage.STOP_INDEXING_ERROR);
+            log.info(ErrorMessage.STOP_INDEXING_ERROR.getMessage());
             throw new StopIndexingException();
         }
     }
@@ -79,7 +79,7 @@ public class IndexingServiceImpl implements IndexingService {
             }
         }
         if (!correctUrl) {
-            log.info(ErrorMessage.PAGE_INDEXING_ERROR);
+            log.info(ErrorMessage.PAGE_INDEXING_ERROR.getMessage());
             throw new PageIndexingException();
         }
     }

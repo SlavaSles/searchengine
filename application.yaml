@@ -29,30 +29,26 @@ logging:
 
 indexing-settings:
   sites:
-#    - url: https://www.lenta.ru
-#      name: Лента.ру
-#    - url: https://www.skillbox.ru
-#      name: Skillbox
 #    - url: https://www.playback.ru
 #      name: PlayBack.Ru
 #    - url: https://radiomv.ru
 #      name: Радио милицейская волна
 #    - url: https://ipfran.ru
 #      name: Институт прикладной физики РАН
-#    - url: https://www.svetlovka.ru
-#      name: Молодежная библиотека им. Светлова
-#    - url: https://www.lutherancathedral.ru
-#      name: Лютеранский кафедральный собор
+    - url: https://www.svetlovka.ru
+      name: Молодежная библиотека им. Светлова
+    - url: https://www.lutherancathedral.ru
+      name: Лютеранский кафедральный собор
     - url: https://поддерживаю.рф
       name: поддерживаю.рф
 #    - url: https://adsf.asd
 #      name: Несуществующий сайт
-    - url: https://gorvodokanal.com
-      name: Горводоканал г. Новосибирска
+#    - url: https://gorvodokanal.com
+#      name: Горводоканал г. Новосибирска
 #    - url: https://et-cetera.ru/mobile
 #      name: Театр "Et cetera"
-#    - url: https://dimonvideo.ru
-#      name: Все для мобильных устройств
+#    - url: https://www.berkeleygroup.co.uk
+#      name: Berkeley Group Development
 
 connection-settings:
   user-agents:
