@@ -6,6 +6,9 @@ import org.apache.lucene.morphology.english.EnglishLuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import searchengine.exceptions.LemmatizerNotFoundException;
 import searchengine.exceptions.errorMessage.ErrorMessage;
 import searchengine.indexing.LemmaSearcher;
@@ -16,6 +19,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Slf4j
+@Component
+@Scope(BeanDefinition.SCOPE_PROTOTYPE)
 public class LemmaSearcherImpl implements LemmaSearcher {
     private final HashMap<String, Integer> lemmasCounter = new HashMap<>();
     private final String[] REGEXES = new String[] {"[A-Za-z]", "[А-ЯЁа-яё]"};
