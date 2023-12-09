@@ -7,7 +7,6 @@ import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import searchengine.config.auxclass.Connection;
 import searchengine.config.SiteCfg;
 import searchengine.exceptions.LemmatizerNotFoundException;
 import searchengine.exceptions.errorMessage.ErrorMessage;
@@ -34,7 +33,6 @@ public class IndexingThread extends Thread {
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
-    private final Connection connection;
     @Setter
     private SiteCfg siteCfg;
     @Setter
@@ -103,7 +101,7 @@ public class IndexingThread extends Thread {
     private void indexSite(Site site) {
         Page firstPage = createNewPage(site, site.getSubDomain().concat("/"));
         allPages.add(firstPage);
-        fjp.invoke(new PageIndexer(connection, firstPage, allPages, allLemmas, allIndices));
+        fjp.invoke(new PageIndexer(firstPage, allPages, allLemmas, allIndices));
     }
 
     private void changeSiteStatus(Site site, Status status) {
@@ -210,7 +208,7 @@ public class IndexingThread extends Thread {
         Status status;
         try {
             log.info("Выполнение индексации страницы: {}", addedUrl);
-            new PageIndexer(connection, addedPage, allPages, allLemmas, allIndices).compute();
+            new PageIndexer(addedPage, allPages, allLemmas, allIndices).compute();
             savePages();
             updateLemmas(site);
             saveIndices();

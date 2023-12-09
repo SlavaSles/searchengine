@@ -6,8 +6,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.context.ApplicationContext;
 import searchengine.config.auxclass.Connection;
-import searchengine.indexing.impl.LemmaSearcherImpl;
 import searchengine.model.Index;
 import searchengine.model.Lemma;
 import searchengine.model.Page;
@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 
 @Slf4j
 public class PageIndexer extends RecursiveAction {
+    private final ApplicationContext context;
     private final String REGEX_SUBDOMAIN_URL_SEARCH;
     private final String REGEX_SUBDOMAIN_URL_RU_SEARCH;
     private final String REGEX_SUBDOMAIN_URL_HTML_SEARCH;
@@ -39,9 +40,10 @@ public class PageIndexer extends RecursiveAction {
     @Setter
     private static volatile Boolean isInterrupted;
 
-    public PageIndexer(Connection connection, Page page, ConcurrentSkipListSet<Page> pages,
+    public PageIndexer(Page page, ConcurrentSkipListSet<Page> pages,
                        ConcurrentHashMap<String, Lemma> lemmas, Set<Index> indices) {
-        this.connection = connection;
+        this.context = ApplicationContextHolder.getApplicationContext();
+        this.connection = context.getBean(Connection.class);
         this.site = page.getSite();
         this.page = page;
         this.pages = pages;
@@ -76,7 +78,7 @@ public class PageIndexer extends RecursiveAction {
         List<PageIndexer> taskList = new ArrayList<>();
         for (Page newPage : newPages) {
             if (!isInterrupted) {
-                PageIndexer pageIndexerTask = new PageIndexer(connection, newPage, pages, lemmas, indices);
+                PageIndexer pageIndexerTask = new PageIndexer(newPage, pages, lemmas, indices);
                 pageIndexerTask.fork();
                 taskList.add(pageIndexerTask);
             }
@@ -85,7 +87,8 @@ public class PageIndexer extends RecursiveAction {
     }
 
     private void getLemmasAndIndicesForPage() {
-        HashMap<String, Integer> lemmasCounter = new LemmaSearcherImpl().searchLemmas(page.getContent());
+        LemmaSearcher lemmaSearcher = context.getBean(LemmaSearcher.class);
+        HashMap<String, Integer> lemmasCounter = lemmaSearcher.searchLemmas(page.getContent());
         for (String pageLemma : lemmasCounter.keySet()) {
             if (lemmas.containsKey(pageLemma)) {
                 lemmas.get(pageLemma).setFrequency(lemmas.get(pageLemma).getFrequency() + 1);

@@ -3,6 +3,7 @@ package searchengine.services.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.SiteCfg;
@@ -13,7 +14,7 @@ import searchengine.exceptions.EmptySearchQueryException;
 import searchengine.exceptions.PageNotFoundException;
 import searchengine.exceptions.SiteNotIndexedException;
 import searchengine.exceptions.errorMessage.ErrorMessage;
-import searchengine.indexing.impl.LemmaSearcherImpl;
+import searchengine.indexing.LemmaSearcher;
 import searchengine.model.*;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
@@ -27,10 +28,12 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class SearchServiceImpl implements SearchService {
+    private final ApplicationContext context;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
+//    private final LemmaSearcher lemmaSearcher;
     private final SitesList sites;
     private Set<String> searchingLemmas;
     private boolean sitesNotIndexed;
@@ -43,7 +46,8 @@ public class SearchServiceImpl implements SearchService {
         }
         log.info("Выполняется поиск страниц сайтов по запросу: {}", query);
         sitesNotIndexed = true;
-        searchingLemmas =  new LemmaSearcherImpl().getLemmas(query);
+        LemmaSearcher lemmaSearcher = context.getBean(LemmaSearcher.class);
+        searchingLemmas =  lemmaSearcher.getLemmas(query);
         List<Map<Page, Float>> findingPagesWithRelevanceForSites = new ArrayList<>();
         for (SiteCfg siteCfg : sites.getSites()) {
             if (!site.isEmpty() && !site.equals(siteCfg.getUrl())) {
@@ -185,7 +189,8 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private String getSnippet(String content) {
-        return new LemmaSearcherImpl().getSnippet(content, searchingLemmas);
+        LemmaSearcher lemmaSearcher = context.getBean(LemmaSearcher.class);
+        return lemmaSearcher.getSnippet(content, searchingLemmas);
     }
 
     private SearchResponse createSearchResponse(Integer size, List<DetailedSearchItem> searchItems) {
