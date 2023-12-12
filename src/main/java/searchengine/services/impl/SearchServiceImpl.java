@@ -33,7 +33,6 @@ public class SearchServiceImpl implements SearchService {
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
-//    private final LemmaSearcher lemmaSearcher;
     private final SitesList sites;
     private Set<String> searchingLemmas;
     private boolean sitesNotIndexed;
@@ -57,11 +56,6 @@ public class SearchServiceImpl implements SearchService {
             if (searchingLemmas.size() != findingLemmas.size()) {
                 continue;
             }
-/*
- *  Закомментировано исключение часто встречающихся лемм. В поисковой выдаче попадаются результаты без этих лемм.
- *  Если исключать леммы из поиска, то нужно также убирать их из Set-а, передаваемого в snippet.
- */
-//            findingLemmas.entrySet().removeIf(entry -> entry.getValue() > 0.1f && findingLemmas.size() > 2);
             List<Map.Entry<Lemma, Float>> sortedLemmasByFrequency = sortFindingLemmasByFrequency(findingLemmas);
             Map<Page, Float> pagesWithRelevance = findPagesWithRelevance(sortedLemmasByFrequency);
             if (!pagesWithRelevance.isEmpty()) {

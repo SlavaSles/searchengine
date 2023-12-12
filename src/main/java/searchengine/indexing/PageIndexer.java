@@ -132,7 +132,6 @@ public class PageIndexer extends RecursiveAction {
         try {
             Thread.sleep(450);
             log.debug("Обращение по адресу: {}", site.getDomain().concat(page.getPath()));
-//            log.debug("Количество най страниц на сайте {} равно: {}", site.getName(), pages.size());
             doc = Jsoup.connect(site.getDomain().concat(page.getPath()))
                     .userAgent(selectAgent())
                     .referrer(connection.getReferrer())
